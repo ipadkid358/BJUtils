@@ -7,11 +7,6 @@
 - (BOOL)isLockScreenActive;
 @end
 
-@interface SBAlertItemsController : NSObject
-+ (instancetype)sharedInstance;
-- (void)activateAlertItem:(SBAlertItem *)alert animated:(BOOL)animated;
-@end
-
 @interface SpringBoard
 - (BOOL)hasFinishedLaunching;
 @end
@@ -52,9 +47,8 @@
         return;
     }
     
-    SBAlertItemsController *alertController = [objc_getClass("SBAlertItemsController") sharedInstance];
     dispatch_async(dispatch_get_main_queue(), ^{
-        [alertController activateAlertItem:self animated:YES];
+        [SBAlertItem activateAlertItem:self];
     });
 }
 

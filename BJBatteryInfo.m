@@ -6,10 +6,20 @@
 #import "BJBatteryInfo.h"
 #import "BJSBAlertItem.h"
 
+@interface BluetoothDevice : NSObject
+- (NSString *)name;
+- (int)batteryLevel;
+@end
+
+@interface BluetoothManager : NSObject
++ (instancetype)sharedInstance;
+- (NSArray<BluetoothDevice *> *)connectedDevices;
+@end
+
 
 @implementation BJBatteryInfo
 
-- (NSString *)parseValues:(NSArray<NSString *> *)values {
+- (NSMutableString *)parseValues:(NSArray<NSString *> *)values {
     NSArray<NSString *> *keys = @[@"Capacity", @"Charge", @"Temperature"];
     NSMutableArray<NSNumber *> *lengths = [NSMutableArray new];
     NSUInteger maxLen = 0;
@@ -29,9 +39,11 @@
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
-    // this does not work in sandboxed apps in iOS 10 and newer, possibly only on 64-bit devices
+    // this does not work in *sandboxed* apps on iOS 10 and newer, possibly only on 64-bit devices
+    // works on iPhone 5, iOS 10.3.3, but not 6 Plus, 10.2 (both jailbroken, same app compiled with Xcode)
     CFMutableDictionaryRef props;
-    IORegistryEntryCreateCFProperties(IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource")), &props, kCFAllocatorDefault, 0);
+    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+    IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0);
     NSDictionary *properties = (__bridge NSMutableDictionary *)props;
     CFRelease(props);
     
@@ -45,11 +57,25 @@
     float ct = celsiusTemp.floatValue/100;
     
     // %.1f indicated 1 decimal place of a float (or double)
-    NSString *body = [self parseValues:@[[NSString stringWithFormat:@"%d/%d", cc, mc], [NSString stringWithFormat:@"%d/%d", cp, cc], [NSString stringWithFormat:@"%.1f°C", ct]]];
+    NSMutableString *body = [self parseValues:@[[NSString stringWithFormat:@"%d/%d", cc, mc],
+                                                [NSString stringWithFormat:@"%d/%d", cp, cc],
+                                                [NSString stringWithFormat:@"%.1f °C", ct]]];
+    
+    for (BluetoothDevice *bluetoothDevice in BluetoothManager.sharedInstance.connectedDevices) {
+        int thisBattery = bluetoothDevice.batteryLevel;
+        if (thisBattery == -1) {
+            continue;
+        }
+        
+        // Because these are each different devices, there are two line breaks
+        [body appendFormat:@"\n\n%@: %d%%", bluetoothDevice.name, thisBattery];
+    }
     
     BJSBAlertItem *sbAlert = [BJSBAlertItem new];
     sbAlert.alertTitle = @"Battery Info";
-    sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:body attributes:@{@"NSFont":[UIFont fontWithName:@"Courier" size:14]}];
+    
+    NSDictionary<NSString *, id> *attributes = @{NSFontAttributeName:[UIFont fontWithName:@"Courier" size:14]};
+    sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:body attributes:attributes];
     sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
         [sbAlert dismiss];
     }]];

@@ -2,12 +2,14 @@
 
 @interface SBAlertItem : NSObject
 
-// alertController must only have properties written to in configure:
+// alertController must only have properties written to in -configure:requirePasscodeForActions:
 @property (readonly) UIAlertController *alertController;
 
 // both of these image properties are only applicable on the lockscreen
 @property (getter=_iconImagePath, nonatomic, retain) NSString *iconImagePath;
 @property (getter=_attachmentImagePath, nonatomic, retain) NSString *attachmentImagePath;
+
++ (void)activateAlertItem:(SBAlertItem *)alertItem;
 
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require;
 - (void)dismiss;

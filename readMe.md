@@ -22,9 +22,9 @@ Functionality:
 
 - Activator listener to display prayer time information
 
-- Show current weather information via Activator gesture
+- Show current weather information via Activator gesture 
 
-- Light weight Activator gesture to connect to Bluetooth headphones
+- Light weight Activator gesture to connect to Bluetooth headphones (see [Tooth](http://cydia.saurik.com/package/com.creaturecoding.tooth/) for public use)
 
 ### Notes
 
@@ -33,4 +33,5 @@ All additional headers not part of the public SDK or theos-vendor-include have l
 A lot of things in BJSupport are different from my normal style, because this is SpringBoard, and I wanted to use the least amount of memory possible. Usually I want to do the least amount of executions possible, but here I decided against that, and repeat a few things to limit memory usage over long periods of time. Another thing is very few things happen on the main thread. Unless absolutely necessary, again because this is SpringBoard, everything is executed on a background thread
 
 Weather icons are provided by [AccuWeather](https://developer.accuweather.com/weather-icons)
+
 All other icons are property of veerklempt, Veexillum author

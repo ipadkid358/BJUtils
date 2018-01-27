@@ -96,10 +96,12 @@
         sbAlert.attachmentImagePath = alertImage;
         
         sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"More Info" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            // calling -openApplicationWithBundleID: from the main thread results in long open times
             dispatch_async(dispatch_get_global_queue(0, 0), ^{
                 // I can only hope this BundleID is a joke, official AccuWeather app
                 [LSApplicationWorkspace.defaultWorkspace openApplicationWithBundleID:@"com.yourcompany.TestWithCustomTabs"];
             });
+            
             [sbAlert dismiss];
         }], [UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
             [sbAlert dismiss];

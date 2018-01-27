@@ -140,6 +140,8 @@
         
         tcpCloseSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (!tcpCloseSocket) {
+            // fail silently if a connection isn't able to be made
+            // this is more for safety reasons, I highly doubt it will ever happen
             return;
         }
         
@@ -149,13 +151,15 @@
         setsockopt(tcpCloseSocket, SOL_SOCKET, SO_REUSEADDR, &value, 1);
         
         listen(tcpCloseSocket, 1);
-        int consocket;
+        
         const int buffSize = 8;
         char reader[buffSize];
+        int consocket;
         while (tcpCloseSocket && (consocket = accept(tcpCloseSocket, NULL, NULL))) {
             memset(&reader, 0, buffSize);
             read(consocket, &reader, buffSize);
             [self tcpHandler:[[NSString alloc] initWithBytes:reader length:buffSize encoding:NSUTF8StringEncoding]];
+            // to make sure everything went well, this is sent back to the server, the 2 is strlen("OK")
             write(consocket, "OK", 2);
             close(consocket);
         }
@@ -208,25 +212,27 @@
 
 - (void)everyOtherMinute:(NSTimer *)timer {
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1/ip"] cachePolicy:1 timeoutInterval:1.2];
+        NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1/ip"] cachePolicy:1 timeoutInterval:1.6];
         [[NSURLSession.sharedSession dataTaskWithRequest:req completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            if (!data || error || ![[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] isEqualToString:@PHONEIP]) {
+            BOOL ipTestFailed = NO;
+            if (data) {
+                NSString *res = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                ipTestFailed = ![res isEqualToString:@PHONEIP];
+            }
+            
+            if (error || ipTestFailed) {
                 BJSBAlertItem *sbAlert = [BJSBAlertItem new];
-                sbAlert.alertMessage = error ? error.localizedDescription : @"An unexpected IP was assigned";
+                sbAlert.alertMessage = ipTestFailed ? @"Was assigned the wrong IP address" : error.localizedDescription;
                 sbAlert.alertTitle = @"VPN Issue";
-                NSMutableArray<UIAlertAction *> *vpnAlertActions = [NSMutableArray new];
-                [vpnAlertActions addObject:[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+                sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
                     [sbAlert dismiss];
-                }]];
-                [vpnAlertActions addObject:[UIAlertAction actionWithTitle:@"Settings" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+                }], [UIAlertAction actionWithTitle:@"Settings" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
                     [UIApplication.sharedApplication applicationOpenURL:[NSURL URLWithString:@"prefs:root=General&path=VPN"]];
                     [sbAlert dismiss];
-                }]];
-                [vpnAlertActions addObject:[UIAlertAction actionWithTitle:@"Unload" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+                }], [UIAlertAction actionWithTitle:@"Unload" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
                     [self stop];
                     [sbAlert dismiss];
                 }]];
-                sbAlert.alertActions = vpnAlertActions;
                 [sbAlert present];
             }
         }] resume];
@@ -296,7 +302,7 @@
 
 // load is called automatically on load
 + (void)load {
-    // make sure everything gets fully loaded first
+    // make sure all classes are added into the runtime before calling objc_getClass
     dispatch_async(dispatch_get_main_queue(), ^{
         [BJServer.sharedInstance start];
     });

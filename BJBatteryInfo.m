@@ -54,6 +54,7 @@
     int mc = maxCapacity.intValue;
     int cc = currentCapacity.intValue;
     int cp = currentPower.intValue;
+    // Temperature is the Celsius value times 100
     float ct = celsiusTemp.floatValue/100;
     
     // %.1f indicated 1 decimal place of a float (or double)
@@ -63,6 +64,7 @@
     
     for (BluetoothDevice *bluetoothDevice in BluetoothManager.sharedInstance.connectedDevices) {
         int thisBattery = bluetoothDevice.batteryLevel;
+        // devices that do not support battery information are supposed to return -1 for -batteryLevel
         if (thisBattery == -1) {
             continue;
         }

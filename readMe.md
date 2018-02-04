@@ -35,3 +35,5 @@ A lot of things in BJSupport are different from my normal style, because this is
 Weather icons are provided by [AccuWeather](https://developer.accuweather.com/weather-icons)
 
 All other icons are property of veerklempt, Veexillum author
+
+The two dropbearswitch subprojects are forked from [DropbearSwitch](https://github.com/julioverne/DropbearSwitch) by JulioVerne, and have been heavily modified. 

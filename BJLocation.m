@@ -15,8 +15,6 @@
 - (void)showFetch:(BOOL)show callBlock:(void (^)(CLLocation *location))block {
     blockToRun = block;
     
-    // if it was on the main thread, it was an Activator gesture
-    // the user should know, otherwise it was a background thing
     if (show) {
         sbAlert = [BJSBAlertItem new];
         sbAlert.alertTitle = @"Getting Location";

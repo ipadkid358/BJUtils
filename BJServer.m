@@ -11,7 +11,6 @@
 #import "BJSBAlertItem.h"
 #import "BJLocation.h"
 
-#define PHONEIP "10.8.0.2"
 
 @interface SBApplication : NSObject
 - (NSString *)bundleIdentifier;
@@ -26,6 +25,7 @@
 + (instancetype)sharedVolumeControl;
 - (void)setMediaVolume:(float)volume;
 @end
+
 
 @interface UIApplication (BlackJacketPrivate)
 - (void)applicationOpenURL:(NSURL *)target;
@@ -49,7 +49,7 @@
     dispatch_once(&dispatchOnce, ^{
         ret = self.new;
         
-        // check that dropbear is setup the way I want, could change after reboot
+        // check that dropbear is setup the way I want, changes after reboot
         [ret checkDropbear];
     });
     
@@ -135,7 +135,7 @@
         struct sockaddr_in serv;
         memset(&serv, 0, sizeof(serv));
         serv.sin_family = AF_INET;
-        serv.sin_addr.s_addr = inet_addr(PHONEIP);
+        serv.sin_addr.s_addr = inet_addr("10.8.0.2");
         serv.sin_port = htons(8080);
         
         tcpCloseSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -169,13 +169,9 @@
 }
 
 - (void)musicListener {
-    NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://ipadkid.cf/status/music.txt"] cachePolicy:1 timeoutInterval:1.6];
-    [[NSURLSession.sharedSession dataTaskWithRequest:req completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (data && !error) {
+    [[NSURLSession.sharedSession dataTaskWithURL:[NSURL URLWithString:@"https://ipadkid.cf/status/music.txt"] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (data) {
             lastMusicStringFetch = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        }
-        if (!lastMusicStringFetch) {
-            lastMusicStringFetch = [NSString new];
         }
     }] resume];
     
@@ -183,7 +179,8 @@
     musicSystemNotif = [NSNotificationCenter.defaultCenter addObserverForName:notifName object:NULL queue:NULL usingBlock:^(NSNotification *note) {
         SBMediaController *mediaController = [objc_getClass("SBMediaController") sharedInstance];
         NSString *playingApp = mediaController.nowPlayingApplication.bundleIdentifier;
-        if (![playingApp isEqualToString:@"com.google.ios.youtubemusic"]) {
+        // only report audio from Spotify, don't want anything funny showing up
+        if (![playingApp isEqualToString:@"com.spotify.client"]) {
             return;
         }
         
@@ -212,17 +209,11 @@
 
 - (void)everyOtherMinute:(NSTimer *)timer {
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1/ip"] cachePolicy:1 timeoutInterval:1.6];
+        NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1/ip"] cachePolicy:1 timeoutInterval:2.2];
         [[NSURLSession.sharedSession dataTaskWithRequest:req completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            BOOL ipTestFailed = NO;
-            if (data) {
-                NSString *res = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                ipTestFailed = ![res isEqualToString:@PHONEIP];
-            }
-            
-            if (error || ipTestFailed) {
+            if (error) {
                 BJSBAlertItem *sbAlert = [BJSBAlertItem new];
-                sbAlert.alertMessage = ipTestFailed ? @"Was assigned the wrong IP address" : error.localizedDescription;
+                sbAlert.alertMessage = error.localizedDescription;
                 sbAlert.alertTitle = @"VPN Issue";
                 sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
                     [sbAlert dismiss];
@@ -291,18 +282,14 @@
 - (void)checkDropbear {
     NSDictionary<NSString *, id> *dropbearPrefs = [NSDictionary dictionaryWithContentsOfFile:@"/Library/LaunchDaemons/dropbear.plist"];
     NSArray<NSString *> *progArgs = dropbearPrefs[@"ProgramArguments"];
-    if (progArgs.count == 7) {
-        // it's fine
-        return;
+    if (progArgs.count != 7) {
+        [FSSwitchPanel.sharedPanel setState:FSSwitchStateOff forSwitchIdentifier:@"com.julioverne.dropbearswitch"];
     }
-    
-    // Uses: https://github.com/ipadkid358/DropbearSwitch
-    [FSSwitchPanel.sharedPanel setState:FSSwitchStateOff forSwitchIdentifier:@"com.julioverne.dropbearswitch"];
 }
 
-// load is called automatically on load
+// load is called automatically when the class is loaded into the runtime
 + (void)load {
-    // make sure all classes are added into the runtime before calling objc_getClass
+    // make sure all classes are added into the runtime before making objc_getClass calls
     dispatch_async(dispatch_get_main_queue(), ^{
         [BJServer.sharedInstance start];
     });

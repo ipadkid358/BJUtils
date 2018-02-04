@@ -16,19 +16,14 @@
 }
 
 - (NSString *)messageForTimings:(NSDictionary *)timings {
-    NSArray<NSString *> *keys = @[@"Fajr start:", @"Fajr end:", @"Dhuhr:", @"Asr:", @"Maghrib:", @"Isha:"];
-    NSArray<NSString *> *values = @[timings[@"Fajr"], timings[@"Sunrise"], timings[@"Dhuhr"], timings[@"Asr"], timings[@"Maghrib"], timings[@"Isha"]];
-    NSUInteger maxLen = 0;
-    for (int i = 0; i < 6; i++) {
-        maxLen = MAX(maxLen, [keys[i] length]);
-    }
-    
-    NSMutableString *str = [NSMutableString new];
-    for (int i = 0; i < 6; i++) {
-        [str appendFormat:@"\n%@ %@", [keys[i] stringByPaddingToLength:maxLen withString:@" " startingAtIndex:0], values[i]];
-    }
-    
-    return str;
+    return [NSString stringWithFormat:@""
+            @"\nFajr start: %@"
+            @"\nFajr end:   %@"
+            @"\nDhuhr:      %@"
+            @"\nAsr:        %@"
+            @"\nMaghrib:    %@"
+            @"\nIsha:       %@",
+            timings[@"Fajr"], timings[@"Sunrise"], timings[@"Dhuhr"], timings[@"Asr"], timings[@"Maghrib"], timings[@"Isha"]];
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
@@ -40,9 +35,10 @@
         
         presenting = YES;
         CLLocationCoordinate2D coordinates = location.coordinate;
+        // REST API: https://aladhan.com/prayer-times-api#GetTimings
         NSString *getStr = [NSString stringWithFormat:@"https://api.aladhan.com/timings/0?method=2&latitude=%f&longitude=%f", coordinates.latitude, coordinates.longitude];
-        [[NSURLSession.sharedSession dataTaskWithURL:[NSURL URLWithString:getStr] completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
-            if (!data || error) {
+        [[NSURLSession.sharedSession dataTaskWithURL:[NSURL URLWithString:getStr] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            if (!data) {
                 return;
             }
             
@@ -62,10 +58,10 @@
             }
             
             BJSBAlertItem *sbAlert = [BJSBAlertItem new];
-            UIFont *font = [UIFont fontWithName:@"Courier" size:14];
+            NSDictionary<NSString *, id> *alertAttribs = @{@"NSFont":[UIFont fontWithName:@"Courier" size:14]};
             
             sbAlert.alertTitle = @"Prayer Info";
-            sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:[self messageForTimings:timings] attributes:@{@"NSFont":font}];
+            sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:[self messageForTimings:timings] attributes:alertAttribs];
             sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
                 [sbAlert dismiss];
             }]];

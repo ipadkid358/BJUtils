@@ -1,0 +1,7 @@
+#!/bin/sh
+
+rm -rf /tmp/FlipswitchCache/
+chown 0:0 /usr/bin/toggleDropbearSwitch
+chmod 6755 /usr/bin/toggleDropbearSwitch
+
+exit 0

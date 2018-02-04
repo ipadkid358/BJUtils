@@ -26,26 +26,33 @@
 }
 
 - (NSString *)parseKey:(NSString *)key info:(NSDictionary *)info {
+    // to used to parse source
+    NSString *const metricKey = @"Metric";
+    NSString *const imperialKey = @"Imperial";
+    NSString *const unitKey = @"Unit";
+    NSString *const valueKey = @"Value";
+    
     NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *source = info[key];
     
     // don't want any ten digit deciamls
-    id metric = source[@"Metric"][@"Value"];
+    id metric = source[metricKey][valueKey];
     if ([metric isKindOfClass:NSNumber.class]) {
         float value = [metric floatValue];
         metric = [NSString stringWithFormat:@"%.1f", value];
     }
     
-    id imperial = source[@"Imperial"][@"Value"];
+    id imperial = source[imperialKey][valueKey];
     if ([imperial isKindOfClass:NSNumber.class]) {
         float value = [imperial floatValue];
         imperial = [NSString stringWithFormat:@"%.1f", value];
     }
     
-    return [NSString stringWithFormat:@"%@ %@  |  %@ %@", metric, source[@"Metric"][@"Unit"], imperial, source[@"Imperial"][@"Unit"]];
+    return [NSString stringWithFormat:@"%@ %@  |  %@ %@", metric, source[metricKey][unitKey], imperial, source[imperialKey][unitKey]];
 }
 
 - (NSString *)parseAccuWeather:(NSDictionary *)dict {
     NSDictionary *windInfo = dict[@"Wind"];
+    // key explanations can be found in the REST API docs below
     return [NSString stringWithFormat:@"\n"
             "Temperature:\n%@\n\n"
             "Description:\n%@\n\n"
@@ -68,6 +75,7 @@
 }
 
 - (void)accuweatherInfo:(NSString *)locationKey {
+    // REST API: https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/%7BlocationKey%7D
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.accuweather.com/currentconditions/v1/%@?apikey=%@&details=true", locationKey, apiKey]];
     [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!data || error) {
@@ -119,6 +127,7 @@
         
         presenting = YES;
         CLLocationCoordinate2D coordinates = location.coordinate;
+        // REST API: https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/geoposition/search
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.accuweather.com/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=%@", coordinates.latitude, coordinates.longitude, apiKey]];
         [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (!data || error) {

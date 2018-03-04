@@ -1,17 +1,18 @@
 #import <spawn.h>
 
 #import "BJDropbearSwitch.h"
+#import "../BJSharedStrings.h"
 
 @implementation BJDropbearSwitch
 
 - (FSSwitchState)stateForSwitchIdentifier:(NSString *)switchIdentifier {
-    NSDictionary *prefsCheck = [NSDictionary dictionaryWithContentsOfFile:@"/Library/LaunchDaemons/dropbear.plist"];
+    NSDictionary *prefsCheck = [NSDictionary dictionaryWithContentsOfFile:@kDropbearPath];
     if (!prefsCheck) {
-        return FSSwitchStateOff;
+        return FSSwitchStateIndeterminate;
     }
     
-    NSArray *progArgs = prefsCheck[@"ProgramArguments"];
-    return (progArgs && [progArgs.lastObject isEqualToString:@"22"]);
+    NSArray *progArgs = prefsCheck[@kProgramArgumentsKey];
+    return (progArgs && [progArgs.lastObject isEqualToString:@kSSHPortString]);
 }
 
 - (void)applyState:(FSSwitchState)newState forSwitchIdentifier:(NSString *)switchIdentifier {

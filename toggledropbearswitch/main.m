@@ -2,7 +2,7 @@
 #import <sys/stat.h>
 #import <spawn.h>
 
-#define kDropbearPath "/Library/LaunchDaemons/dropbear.plist"
+#import "../BJSharedStrings.h"
 
 void toggleDropbear(char *load) {
     pid_t pid;
@@ -31,8 +31,9 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         
-        NSMutableArray *progArgs = [NSMutableArray arrayWithArray:dropbearPrefs[@"ProgramArguments"]];
-        NSString *basePort = @"22";
+        NSString *progArgsKey = @kProgramArgumentsKey;
+        NSMutableArray *progArgs = [NSMutableArray arrayWithArray:dropbearPrefs[progArgsKey]];
+        NSString *basePort = @kSSHPortString;
         if (progArgs.count != 7) {
             progArgs[4] = @"127.0.0.1:51022";
             progArgs[5] = @"-p";
@@ -45,9 +46,9 @@ int main(int argc, char *argv[]) {
         }
         
         // problem with this is if the device is not on the VPN, the server needs to be restarted
-        progArgs[6] = [[NSString stringWithUTF8String:coreArg] boolValue] ? basePort : @"10.8.0.2:22";
+        progArgs[6] = [[NSString stringWithUTF8String:coreArg] boolValue] ? basePort : @kPhoneVPNIP ":" kSSHPortString;
         
-        dropbearPrefs[@"ProgramArguments"] = progArgs;
+        dropbearPrefs[progArgsKey] = progArgs;
         
         if (![dropbearPrefs writeToFile:dropbearPath atomically:YES]) {
             return 1;

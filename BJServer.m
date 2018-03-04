@@ -10,7 +10,7 @@
 #import "BJWallpaper.h"
 #import "BJSBAlertItem.h"
 #import "BJLocation.h"
-
+#import "BJSharedStrings.h"
 
 @interface SBApplication : NSObject
 - (NSString *)bundleIdentifier;
@@ -48,9 +48,6 @@
     
     dispatch_once(&dispatchOnce, ^{
         ret = self.new;
-        
-        // check that dropbear is setup the way I want, changes after reboot
-        [ret checkDropbear];
     });
     
     return ret;
@@ -135,7 +132,7 @@
         struct sockaddr_in serv;
         memset(&serv, 0, sizeof(serv));
         serv.sin_family = AF_INET;
-        serv.sin_addr.s_addr = inet_addr("10.8.0.2");
+        serv.sin_addr.s_addr = inet_addr(kPhoneVPNIP);
         serv.sin_port = htons(8080);
         
         tcpCloseSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -179,8 +176,8 @@
     musicSystemNotif = [NSNotificationCenter.defaultCenter addObserverForName:notifName object:NULL queue:NULL usingBlock:^(NSNotification *note) {
         SBMediaController *mediaController = [objc_getClass("SBMediaController") sharedInstance];
         NSString *playingApp = mediaController.nowPlayingApplication.bundleIdentifier;
-        // only report audio from Spotify, don't want anything funny showing up
-        if (![playingApp isEqualToString:@"com.spotify.client"]) {
+        // only report audio from YouTube Music
+        if (![playingApp isEqualToString:@"com.google.ios.youtubemusic"]) {
             return;
         }
         
@@ -277,14 +274,6 @@
     BJWallpaper.sharedInstance.shouldPost = YES;
     
     return YES;
-}
-
-- (void)checkDropbear {
-    NSDictionary<NSString *, id> *dropbearPrefs = [NSDictionary dictionaryWithContentsOfFile:@"/Library/LaunchDaemons/dropbear.plist"];
-    NSArray<NSString *> *progArgs = dropbearPrefs[@"ProgramArguments"];
-    if (progArgs.count != 7) {
-        [FSSwitchPanel.sharedPanel setState:FSSwitchStateOff forSwitchIdentifier:@"com.julioverne.dropbearswitch"];
-    }
 }
 
 // load is called automatically when the class is loaded into the runtime

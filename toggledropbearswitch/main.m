@@ -2,7 +2,7 @@
 #import <sys/stat.h>
 #import <spawn.h>
 
-#import "../BJSharedStrings.h"
+#import "../BJSharedInfo.h"
 
 void toggleDropbear(char *load) {
     pid_t pid;
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     setuid(root);
     setgid(wheel);
     
-    // root required for setting permissions on the plist and to load and unload the process
+    // root required for setting permissions on the plist, and to load and unload the process
     if ((getuid() != root) || (getgid() != wheel)) {
         return 1;
     }
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         
-        // problem with this is if the device is not on the VPN, the server needs to be restarted
+        // problem with this is if the device is not on the VPN, the server needs to be restarted again, once it is
         progArgs[6] = [[NSString stringWithUTF8String:coreArg] boolValue] ? basePort : @kPhoneVPNIP ":" kSSHPortString;
         
         dropbearPrefs[progArgsKey] = progArgs;

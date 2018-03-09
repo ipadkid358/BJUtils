@@ -1,15 +1,15 @@
 #import "BJPrayerInfo.h"
-#import "BJLocation.h"
-#import "BJSBAlertItem.h"
+#import "../BJLocation.h"
+#import "../BJSBAlertItem.h"
 
 @implementation BJPrayerInfo {
-    BJLocation *locationInstance;
-    BOOL presenting;
+    BJLocation *_locationInstance;
+    BOOL _presenting;
 }
 
 - (instancetype)init {
     if (self = [super init]) {
-        locationInstance = BJLocation.new;
+        _locationInstance = BJLocation.new;
     }
     
     return self;
@@ -27,13 +27,13 @@
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
-    presenting = NO;
-    [locationInstance showFetch:YES callBlock:^(CLLocation *location) {
-        if (presenting) {
+    _presenting = NO;
+    [_locationInstance showFetch:YES callBlock:^(CLLocation *location) {
+        if (_presenting) {
             return;
         }
         
-        presenting = YES;
+        _presenting = YES;
         CLLocationCoordinate2D coordinates = location.coordinate;
         // REST API: https://aladhan.com/prayer-times-api#GetTimings
         NSString *getStr = [NSString stringWithFormat:@"https://api.aladhan.com/timings/0?method=2&latitude=%f&longitude=%f", coordinates.latitude, coordinates.longitude];

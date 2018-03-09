@@ -1,7 +1,7 @@
 #import <spawn.h>
 
 #import "BJDropbearSwitch.h"
-#import "../BJSharedStrings.h"
+#import "../BJSharedInfo.h"
 
 @implementation BJDropbearSwitch
 

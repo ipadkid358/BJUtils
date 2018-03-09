@@ -7,23 +7,23 @@
 
 
 @implementation BJLocation {
-    CLLocationManager *locationManager;
-    void (^blockToRun)(CLLocation *location);
-    BJSBAlertItem *sbAlert;
+    CLLocationManager *_locationManager;
+    void (^_blockToRun)(CLLocation *location);
+    BJSBAlertItem *_sbAlert;
 }
 
 - (void)showFetch:(BOOL)show callBlock:(void (^)(CLLocation *location))block {
-    blockToRun = block;
+    _blockToRun = block;
     
     if (show) {
-        sbAlert = [BJSBAlertItem new];
-        sbAlert.alertTitle = @"Getting Location";
-        sbAlert.alertMessage = @"Calculating current location, please wait...";
-        sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-            [sbAlert dismiss];
+        _sbAlert = [BJSBAlertItem new];
+        _sbAlert.alertTitle = @"Getting Location";
+        _sbAlert.alertMessage = @"Calculating current location, please wait...";
+        _sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+            [_sbAlert dismiss];
         }]];
         
-        [sbAlert present];
+        [_sbAlert present];
     }
     
     // authorizationStatus should only need to be reset once per lifetime, but you never know
@@ -33,7 +33,7 @@
         [CLLocationManager setAuthorizationStatusByType:kCLAuthorizationStatusAuthorizedAlways forBundleIdentifier:bundleID];
     }
     
-    [locationManager requestLocation];
+    [_locationManager requestLocation];
 }
 
 - (instancetype)init {
@@ -42,12 +42,12 @@
         // to avoid returning before being properly initialized, we using dispatch_sync
         // calling dispatch_sync on the same thread will lock that thread
         if (NSThread.isMainThread) {
-            locationManager = CLLocationManager.new;
-            locationManager.delegate = self;
+            _locationManager = CLLocationManager.new;
+            _locationManager.delegate = self;
         } else {
             dispatch_sync(dispatch_get_main_queue(), ^{
-                locationManager = CLLocationManager.new;
-                locationManager.delegate = self;
+                _locationManager = CLLocationManager.new;
+                _locationManager.delegate = self;
             });
         }
     }
@@ -56,14 +56,17 @@
 }
 
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error {
-    // This method is required at runtime
+    [_sbAlert dismiss];
+    _sbAlert = NULL;
+    
+    _blockToRun(NULL);
 }
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray<CLLocation *> *)locations {
-    [sbAlert dismiss];
-    sbAlert = NULL;
+    [_sbAlert dismiss];
+    _sbAlert = NULL;
     
-    blockToRun(locations.firstObject);
+    _blockToRun(locations.firstObject);
 }
 
 @end

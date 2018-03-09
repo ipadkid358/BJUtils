@@ -1,6 +1,7 @@
 #import "BJWeatherInfo.h"
-#import "BJLocation.h"
-#import "BJSBAlertItem.h"
+#import "../BJSharedInfo.h"
+#import "../BJLocation.h"
+#import "../BJSBAlertItem.h"
 
 @interface LSApplicationWorkspace : NSObject
 + (instancetype)defaultWorkspace;
@@ -9,17 +10,16 @@
 
 
 @implementation BJWeatherInfo {
-    BJLocation *locationInstance;
-    NSString *apiKey;
-    BOOL presenting;
+    BJLocation *_locationInstance;
+    NSString *_apiKey;
+    BOOL _presenting;
 }
 
 - (instancetype)init {
     if (self = [super init]) {
-        locationInstance = BJLocation.new;
+        _locationInstance = BJLocation.new;
         // because I didn't want to expose my API key, it's hardcoded in a plist
-        NSUserDefaults *userDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
-        apiKey = [userDefaults stringForKey:@"BJWApiKey"];
+        _apiKey = [sharedBlackJacketDefaults stringForKey:@"BJWApiKey"];
     }
     
     return self;
@@ -76,7 +76,7 @@
 
 - (void)accuweatherInfo:(NSString *)locationKey {
     // REST API: https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/%7BlocationKey%7D
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.accuweather.com/currentconditions/v1/%@?apikey=%@&details=true", locationKey, apiKey]];
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.accuweather.com/currentconditions/v1/%@?apikey=%@&details=true", locationKey, _apiKey]];
     [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!data || error) {
             return;
@@ -119,16 +119,16 @@
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
-    presenting = NO;
-    [locationInstance showFetch:YES callBlock:^(CLLocation *location) {
-        if (presenting) {
+    _presenting = NO;
+    [_locationInstance showFetch:YES callBlock:^(CLLocation *location) {
+        if (_presenting) {
             return;
         }
         
-        presenting = YES;
+        _presenting = YES;
         CLLocationCoordinate2D coordinates = location.coordinate;
         // REST API: https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/geoposition/search
-        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.accuweather.com/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=%@", coordinates.latitude, coordinates.longitude, apiKey]];
+        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://api.accuweather.com/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=%@", coordinates.latitude, coordinates.longitude, _apiKey]];
         [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (!data || error) {
                 return;

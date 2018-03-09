@@ -1,4 +1,5 @@
 #import "BJBluetooth.h"
+#import "../BJSharedInfo.h"
 
 @interface BluetoothDevice : NSObject
 - (NSString *)address;
@@ -15,8 +16,7 @@
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
     // Keep my headphone's MAC private, stored in plist
-    NSUserDefaults *userDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
-    NSString *mac = [userDefaults stringForKey:@"BJBmacAddress"];
+    NSString *mac = [sharedBlackJacketDefaults stringForKey:@"BJBmacAddress"];
     for (BluetoothDevice *device in BluetoothManager.sharedInstance.pairedDevices) {
         if ([device.address isEqualToString:mac]) {
             [device connect];

@@ -10,7 +10,7 @@
 #import "BJWallpaper.h"
 #import "BJSBAlertItem.h"
 #import "BJLocation.h"
-#import "BJSharedStrings.h"
+#import "BJSharedInfo.h"
 
 @interface SBApplication : NSObject
 - (NSString *)bundleIdentifier;
@@ -31,15 +31,16 @@
 - (void)applicationOpenURL:(NSURL *)target;
 @end
 
+NSUserDefaults *sharedBlackJacketDefaults;
 
 @implementation BJServer {
-    NSString *lastMusicStringFetch;
-    id<NSObject> musicSystemNotif;
-    AVAudioPlayer *audioPlayer;
-    BJLocation *locationInstance;
-    NSTimer *minuteTimer;
-    BOOL isLoaded;
-    int tcpCloseSocket;
+    NSString *_lastMusicStringFetch;
+    id<NSObject> _musicSystemNotif;
+    AVAudioPlayer *_audioPlayer;
+    BJLocation *_locationInstance;
+    NSTimer *_minuteTimer;
+    BOOL _isLoaded;
+    int _tcpCloseSocket;
 }
 
 + (instancetype)sharedInstance {
@@ -59,15 +60,15 @@
     
     // No particular reason for this file, any audio file can be used
     NSData *musicData = [NSData dataWithContentsOfFile:@"/System/Library/Audio/UISounds/New/Sherwood_Forest.caf"];
-    audioPlayer = [[AVAudioPlayer alloc] initWithData:musicData error:NULL];
-    audioPlayer.numberOfLoops = -1;
+    _audioPlayer = [[AVAudioPlayer alloc] initWithData:musicData error:NULL];
+    _audioPlayer.numberOfLoops = -1;
     
     // audioPlayer.volume doesn't appear to work
     VolumeControl *volumeControl = [objc_getClass("VolumeControl") sharedVolumeControl];
     
     dispatch_async(dispatch_get_main_queue(), ^{
         [audioSession setActive:YES error:NULL];
-        [audioPlayer play];
+        [_audioPlayer play];
         [volumeControl setMediaVolume:1];
     });
 }
@@ -75,16 +76,16 @@
 - (void)stopAudio {
     AVAudioSession *audioSession = AVAudioSession.sharedInstance;
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (audioPlayer) {
-            [audioPlayer stop];
-            audioPlayer = NULL;
+        if (_audioPlayer) {
+            [_audioPlayer stop];
+            _audioPlayer = NULL;
             [audioSession setActive:NO error:NULL];
         }
     });
 }
 
 - (void)postLocation {
-    [locationInstance showFetch:NO callBlock:^(CLLocation *location) {
+    [_locationInstance showFetch:NO callBlock:^(CLLocation *location) {
         [CLGeocoder.new reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
             if (error) {
                 return;
@@ -109,7 +110,7 @@
 - (void)tcpHandler:(NSString *)body {
     @autoreleasepool {
         if ([body isEqualToString:@"wallpapr"]) {
-            [BJWallpaper.sharedInstance updateWallpaper];
+            [BJWallpaper.sharedInstance updateWallpaperForLocation:(PLStaticWallpaperLocationLockscreen | PLStaticWallpaperLocationHomescreen)];
             return;
         }
         if ([body isEqualToString:@"strAudio"]) {
@@ -135,24 +136,24 @@
         serv.sin_addr.s_addr = inet_addr(kPhoneVPNIP);
         serv.sin_port = htons(8080);
         
-        tcpCloseSocket = socket(AF_INET, SOCK_STREAM, 0);
-        if (!tcpCloseSocket) {
+        _tcpCloseSocket = socket(AF_INET, SOCK_STREAM, 0);
+        if (!_tcpCloseSocket) {
             // fail silently if a connection isn't able to be made
             // this is more for safety reasons, I highly doubt it will ever happen
             return;
         }
         
-        bind(tcpCloseSocket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
+        bind(_tcpCloseSocket, (struct sockaddr *)&serv, sizeof(struct sockaddr));
         
         char value = 1;
-        setsockopt(tcpCloseSocket, SOL_SOCKET, SO_REUSEADDR, &value, 1);
+        setsockopt(_tcpCloseSocket, SOL_SOCKET, SO_REUSEADDR, &value, 1);
         
-        listen(tcpCloseSocket, 1);
+        listen(_tcpCloseSocket, 1);
         
         const int buffSize = 8;
         char reader[buffSize];
         int consocket;
-        while (tcpCloseSocket && (consocket = accept(tcpCloseSocket, NULL, NULL))) {
+        while (_tcpCloseSocket && (consocket = accept(_tcpCloseSocket, NULL, NULL))) {
             memset(&reader, 0, buffSize);
             read(consocket, &reader, buffSize);
             [self tcpHandler:[[NSString alloc] initWithBytes:reader length:buffSize encoding:NSUTF8StringEncoding]];
@@ -161,19 +162,19 @@
             close(consocket);
         }
         
-        close(tcpCloseSocket);
+        close(_tcpCloseSocket);
     });
 }
 
 - (void)musicListener {
     [[NSURLSession.sharedSession dataTaskWithURL:[NSURL URLWithString:@"https://ipadkid.cf/status/music.txt"] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (data) {
-            lastMusicStringFetch = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            _lastMusicStringFetch = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         }
     }] resume];
     
     NSString *notifName = (__bridge NSString *)kMRMediaRemoteNowPlayingInfoDidChangeNotification;
-    musicSystemNotif = [NSNotificationCenter.defaultCenter addObserverForName:notifName object:NULL queue:NULL usingBlock:^(NSNotification *note) {
+    _musicSystemNotif = [NSNotificationCenter.defaultCenter addObserverForName:notifName object:NULL queue:NULL usingBlock:^(NSNotification *note) {
         SBMediaController *mediaController = [objc_getClass("SBMediaController") sharedInstance];
         NSString *playingApp = mediaController.nowPlayingApplication.bundleIdentifier;
         // only report audio from YouTube Music
@@ -191,7 +192,7 @@
             }
             
             NSString *newMusic = [NSString stringWithFormat:@"%@ by %@", songName, artistName];
-            if ([newMusic isEqualToString:lastMusicStringFetch]) {
+            if ([newMusic isEqualToString:_lastMusicStringFetch]) {
                 return;
             }
             
@@ -199,7 +200,7 @@
             req.HTTPMethod = @"POST";
             req.HTTPBody = [newMusic dataUsingEncoding:NSUTF8StringEncoding];
             [[NSURLSession.sharedSession dataTaskWithRequest:req] resume];
-            lastMusicStringFetch = newMusic;
+            _lastMusicStringFetch = newMusic;
         });
     }];
 }
@@ -228,48 +229,48 @@
 }
 
 - (BOOL)stop {
-    if (!isLoaded) {
+    if (!_isLoaded) {
         return NO;
     }
     
     // tcpListener
-    close(tcpCloseSocket);
-    tcpCloseSocket = 0;
+    close(_tcpCloseSocket);
+    _tcpCloseSocket = 0;
     
     // musicListener
-    lastMusicStringFetch = NULL;
-    if (musicSystemNotif) {
-        [NSNotificationCenter.defaultCenter removeObserver:musicSystemNotif];
-        musicSystemNotif = NULL;
+    _lastMusicStringFetch = NULL;
+    if (_musicSystemNotif) {
+        [NSNotificationCenter.defaultCenter removeObserver:_musicSystemNotif];
+        _musicSystemNotif = NULL;
     }
     
     // everyOtherMinute
-    [minuteTimer invalidate];
-    minuteTimer = NULL;
+    [_minuteTimer invalidate];
+    _minuteTimer = NULL;
     
     // turn off posts for wallpaper
     BJWallpaper.sharedInstance.shouldPost = NO;
     
     // free memory
-    locationInstance = NULL;
+    _locationInstance = NULL;
     
     // set unloaded
-    isLoaded = NO;
+    _isLoaded = NO;
     return YES;
 }
 
 - (BOOL)start {
-    if (isLoaded) {
+    if (_isLoaded) {
         return NO;
     }
     
-    isLoaded = YES;
+    _isLoaded = YES;
     [self tcpListener];
     [self musicListener];
     
-    locationInstance = [BJLocation new];
+    _locationInstance = [BJLocation new];
     
-    minuteTimer = [NSTimer scheduledTimerWithTimeInterval:120 target:self selector:@selector(everyOtherMinute:) userInfo:NULL repeats:YES];
+    _minuteTimer = [NSTimer scheduledTimerWithTimeInterval:120 target:self selector:@selector(everyOtherMinute:) userInfo:NULL repeats:YES];
     
     BJWallpaper.sharedInstance.shouldPost = YES;
     
@@ -278,6 +279,7 @@
 
 // load is called automatically when the class is loaded into the runtime
 + (void)load {
+    sharedBlackJacketDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
     // make sure all classes are added into the runtime before making objc_getClass calls
     dispatch_async(dispatch_get_main_queue(), ^{
         [BJServer.sharedInstance start];

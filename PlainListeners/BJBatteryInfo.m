@@ -4,7 +4,7 @@
 #import <IOKit/IOKitLib.h>
 
 #import "BJBatteryInfo.h"
-#import "BJSBAlertItem.h"
+#import "../BJSBAlertItem.h"
 
 @interface BluetoothDevice : NSObject
 - (NSString *)name;

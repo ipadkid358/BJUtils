@@ -16,10 +16,12 @@
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
     // Keep my headphone's MAC private, stored in plist
-    NSString *mac = [sharedBlackJacketDefaults stringForKey:@"BJBmacAddress"];
+    NSString *mac = @kHeadphoneMACAddress;
     for (BluetoothDevice *device in BluetoothManager.sharedInstance.pairedDevices) {
         if ([device.address isEqualToString:mac]) {
             [device connect];
+            event.handled = YES;
+            break;
         }
     }
 }

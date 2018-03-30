@@ -13,7 +13,10 @@
 
 @interface UIAlertController (BlackJacketPrivate)
 @property (setter=_setAttributedMessage:, getter=_attributedMessage, nonatomic, copy) NSAttributedString *attributedMessage;
-- (void)_setActions:(NSArray<UIAlertAction *> *)actions;
+@end
+
+@interface UIAlertAction (BlackJacketPrivate)
+@property (nonatomic, copy) void (^handler)(UIAlertAction *action);
 @end
 
 
@@ -23,7 +26,18 @@
     [super configure:configure requirePasscodeForActions:require];
     
     UIAlertController *alert = self.alertController;
-    [alert _setActions:_alertActions];
+    
+    void (^defaulAlertHandler)(UIAlertAction *action) = ^(UIAlertAction *action) {
+        [self dismiss];
+    };
+    
+    for (UIAlertAction *alertAction in _alertActions) {
+        if (!alertAction.handler) {
+            alertAction.handler = defaulAlertHandler;
+        }
+        [alert addAction:alertAction];
+    }
+    
     alert.title = _alertTitle;
     
     if (_alertAttributedMessage) {

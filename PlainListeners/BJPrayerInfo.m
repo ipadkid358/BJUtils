@@ -62,9 +62,7 @@
             
             sbAlert.alertTitle = @"Prayer Info";
             sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:[self messageForTimings:timings] attributes:alertAttribs];
-            sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-                [sbAlert dismiss];
-            }]];
+            sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:NULL]];
             sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.prayer/Notif";
             [sbAlert present];
         }] resume];

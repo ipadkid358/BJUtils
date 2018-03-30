@@ -78,9 +78,7 @@
     
     NSDictionary<NSString *, id> *attributes = @{NSFontAttributeName:[UIFont fontWithName:@"Courier" size:14]};
     sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:body attributes:attributes];
-    sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-        [sbAlert dismiss];
-    }]];
+    sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:NULL]];
     sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.battery/Notif";
     [sbAlert present];
 }

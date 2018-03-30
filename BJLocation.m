@@ -19,9 +19,7 @@
         _sbAlert = [BJSBAlertItem new];
         _sbAlert.alertTitle = @"Getting Location";
         _sbAlert.alertMessage = @"Calculating current location, please wait...";
-        _sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
-            [_sbAlert dismiss];
-        }]];
+        _sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:NULL]];
         
         [_sbAlert present];
     }

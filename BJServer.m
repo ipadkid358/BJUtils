@@ -31,7 +31,6 @@
 - (void)applicationOpenURL:(NSURL *)target;
 @end
 
-NSUserDefaults *sharedBlackJacketDefaults;
 
 @implementation BJServer {
     NSString *_lastMusicStringFetch;
@@ -279,7 +278,6 @@ NSUserDefaults *sharedBlackJacketDefaults;
 
 // load is called automatically when the class is loaded into the runtime
 + (void)load {
-    sharedBlackJacketDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
     // make sure all classes are added into the runtime before making objc_getClass calls
     dispatch_async(dispatch_get_main_queue(), ^{
         [BJServer.sharedInstance start];

@@ -21,7 +21,17 @@
 @end
 
 
-@implementation BJWallpaper
+@implementation BJWallpaper {
+    NSUserDefaults *_defaults;
+}
+
+- (instancetype)init {
+    if (self = [super init]) {
+        _defaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
+    }
+    
+    return self;
+}
 
 + (instancetype)sharedInstance {
     static dispatch_once_t dispatchOnce;
@@ -43,7 +53,7 @@
 
 - (void)updateEndpoint {
     NSString *fallback = @"https://source.unsplash.com/random";
-    NSString *target = [sharedBlackJacketDefaults stringForKey:@"BJWImageURL"];
+    NSString *target = [_defaults stringForKey:@"BJWImageURL"];
     self.wallpaperEndpoint = [NSURL URLWithString:target] ?: [NSURL URLWithString:fallback];
 }
 

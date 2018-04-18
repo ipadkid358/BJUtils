@@ -1,7 +1,7 @@
 #import "BJWeatherInfo.h"
 #import "../BJSharedInfo.h"
-#import "../BJLocation.h"
-#import "../BJSBAlertItem.h"
+#import "../MainUtils/BJLocation.h"
+#import "../MainUtils/BJSBAlertItem.h"
 
 #define kAccuWeatherAPIBase "https://api.accuweather.com"
 
@@ -12,7 +12,9 @@
 
 
 @implementation BJWeatherInfo {
+    /// Strong reference to a location instance, used to make sure ARC doesn't release too early
     BJLocation *_locationInstance;
+    /// Check if a present request has already been sent
     BOOL _presenting;
 }
 

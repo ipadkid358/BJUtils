@@ -1,9 +1,11 @@
 #import "BJPrayerInfo.h"
-#import "../BJLocation.h"
-#import "../BJSBAlertItem.h"
+#import "../MainUtils/BJLocation.h"
+#import "../MainUtils/BJSBAlertItem.h"
 
 @implementation BJPrayerInfo {
+    /// Strong reference to a location instance, used to make sure ARC doesn't release too early
     BJLocation *_locationInstance;
+    /// Check if a present request has already been sent
     BOOL _presenting;
 }
 

@@ -16,7 +16,11 @@
 }
 
 - (void)applyState:(FSSwitchState)newState forSwitchIdentifier:(NSString *)switchIdentifier {
-    execlp("/usr/bin/toggleDropbearSwitch", "toggleDropbearSwitch", ((newState == 1) ? "1" : "0"));
+    pid_t pid;
+    char *argv[] = { "toggleDropbearSwitch", (newState ? "1" : "0"), NULL };
+    posix_spawn(&pid, "/usr/bin/toggleDropbearSwitch", NULL, NULL, argv, NULL);
+    // don't really need to wait, but we don't want the switch to be spammed or anything
+    waitpid(pid, NULL, 0);
 }
 
 @end

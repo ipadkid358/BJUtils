@@ -8,6 +8,8 @@ typedef NS_ENUM(NSUInteger, PLStaticWallpaperLocation) {
     PLStaticWallpaperLocationHomescreen = 2,
 };
 
+/// Activator Listener to change SpringBoard wallpaper. Provides an interface for getting and settings wallpapers.
+/// Optionally posts set wallpapers to my server (based on shouldPost property)
 @interface BJWallpaper : NSObject <LAListener>
 
 /*!

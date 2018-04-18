@@ -5,10 +5,12 @@
 + (void)setAuthorizationStatusByType:(CLAuthorizationStatus)type forBundleIdentifier:(NSString *)bundle;
 @end
 
-
 @implementation BJLocation {
+    /// LocationManager of which we are the delegate, need to hold a strong reference to this
     CLLocationManager *_locationManager;
+    /// Block passed in by the caller of showFetch:callBlock:
     void (^_blockToRun)(CLLocation *location);
+    /// Alert item used to alert the user a location fetch is in process
     BJSBAlertItem *_sbAlert;
 }
 
@@ -19,7 +21,7 @@
         _sbAlert = [BJSBAlertItem new];
         _sbAlert.alertTitle = @"Getting Location";
         _sbAlert.alertMessage = @"Calculating current location, please wait...";
-        _sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:NULL]];
+        _sbAlert.alertActions = @[ [UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleCancel handler:NULL] ];
         
         [_sbAlert present];
     }
@@ -39,14 +41,15 @@
         // CLLocationManager -init needs to be on the main thread
         // to avoid returning before being properly initialized, we using dispatch_sync
         // calling dispatch_sync on the same thread will lock that thread
-        if (NSThread.isMainThread) {
+        void (^setupLocationManager)(void) = ^{
             _locationManager = CLLocationManager.new;
             _locationManager.delegate = self;
+        };
+        
+        if (NSThread.isMainThread) {
+            setupLocationManager();
         } else {
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                _locationManager = CLLocationManager.new;
-                _locationManager.delegate = self;
-            });
+            dispatch_sync(dispatch_get_main_queue(), setupLocationManager);
         }
     }
     

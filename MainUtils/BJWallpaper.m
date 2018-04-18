@@ -1,8 +1,8 @@
 #import <notify.h>
 #import <objc/runtime.h>
 
+#import "../BJSharedInfo.h"
 #import "BJWallpaper.h"
-#import "BJSharedInfo.h"
 
 @interface PLStaticWallpaperImageViewController : NSObject
 - (instancetype)initWithUIImage:(UIImage *)image;
@@ -19,7 +19,6 @@
 - (SBFWallpaperView *)homescreenWallpaperView;
 - (SBFWallpaperView *)sharedWallpaperView;
 @end
-
 
 @implementation BJWallpaper {
     NSUserDefaults *_defaults;
@@ -53,8 +52,7 @@
 
 - (void)updateEndpoint {
     NSString *fallback = @"https://source.unsplash.com/random";
-    NSString *target = [_defaults stringForKey:@"BJWImageURL"];
-    self.wallpaperEndpoint = [NSURL URLWithString:target] ?: [NSURL URLWithString:fallback];
+    self.wallpaperEndpoint = [_defaults URLForKey:@"BJWImageURL"] ?: [NSURL URLWithString:fallback];
 }
 
 - (void)updateWallpaperForLocation:(PLStaticWallpaperLocation)location {

@@ -1,5 +1,7 @@
 #import <CoreLocation/CoreLocation.h>
 
+/// Convience class for getting location once, if polling location, please use your own class.
+/// Caller must hold a strong reference to the instance for the duration of the location call
 @interface BJLocation : NSObject <CLLocationManagerDelegate>
 
 /*!

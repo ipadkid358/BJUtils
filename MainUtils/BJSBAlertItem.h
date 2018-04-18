@@ -25,7 +25,7 @@
 // SpringBoard will call this, do not call yourself
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require;
 
-/// Dismiss the alert. Required to manually be called in each alertAction handler, to close the alert if desired
+/// Dismiss the alert. Passing NULL to the completion handler on UIAlertAction will automatically call this
 - (void)dismiss;
 
 @end

@@ -19,6 +19,7 @@
 @property (nonatomic, copy) void (^handler)(UIAlertAction *action);
 @end
 
+
 @implementation BJSBAlertItem
 
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {

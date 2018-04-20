@@ -5,6 +5,7 @@
 + (void)setAuthorizationStatusByType:(CLAuthorizationStatus)type forBundleIdentifier:(NSString *)bundle;
 @end
 
+
 @implementation BJLocation {
     /// LocationManager of which we are the delegate, need to hold a strong reference to this
     CLLocationManager *_locationManager;

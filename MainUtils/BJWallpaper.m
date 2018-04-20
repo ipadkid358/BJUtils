@@ -20,6 +20,7 @@
 - (SBFWallpaperView *)sharedWallpaperView;
 @end
 
+
 @implementation BJWallpaper {
     NSUserDefaults *_defaults;
 }
@@ -51,8 +52,7 @@
 }
 
 - (void)updateEndpoint {
-    NSString *fallback = @"https://source.unsplash.com/random";
-    self.wallpaperEndpoint = [_defaults URLForKey:@"BJWImageURL"] ?: [NSURL URLWithString:fallback];
+    self.wallpaperEndpoint = [_defaults URLForKey:@"BJWImageURL"] ?: [NSURL URLWithString:@"https://source.unsplash.com/random"];
 }
 
 - (void)updateWallpaperForLocation:(PLStaticWallpaperLocation)location {

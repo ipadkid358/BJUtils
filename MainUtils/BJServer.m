@@ -29,6 +29,7 @@
 - (void)applicationOpenURL:(NSURL *)target;
 @end
 
+
 @implementation BJServer {
     /// Last string posted to the music server, check for duplicates
     NSString *_lastMusicStringFetch;
@@ -89,27 +90,26 @@
 
 - (void)postLocation {
     [_locationInstance showFetch:NO callBlock:^(CLLocation *location) {
-        [CLGeocoder.new reverseGeocodeLocation:location
-                             completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
-                                 if (error) {
-                                     return;
-                                 }
-                                 
-                                 CLPlacemark *targetPlacemark = placemarks.firstObject;
-                                 if (targetPlacemark) {
-                                     CLLocationCoordinate2D coordinates = location.coordinate;
-                                     CLLocationDegrees latitude = coordinates.latitude;
-                                     CLLocationDegrees longitude = coordinates.longitude;
-                                     NSString *postStr = [NSString stringWithFormat:@"%@, %@, %@ %@ <a href=\"https://maps.google.com/?ll=%f,%f\" target=\"_blank\">(%f, %f)</a>",
-                                                          targetPlacemark.name, targetPlacemark.locality, targetPlacemark.administrativeArea,
-                                                          targetPlacemark.postalCode, latitude, longitude, latitude, longitude];
-                                     
-                                     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1:1627/location"]];
-                                     req.HTTPMethod = @"POST";
-                                     req.HTTPBody = [postStr dataUsingEncoding:NSUTF8StringEncoding];
-                                     [[NSURLSession.sharedSession dataTaskWithRequest:req] resume];
-                                 }
-                             }];
+        [CLGeocoder.new reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
+            if (error) {
+                return;
+            }
+            
+            CLPlacemark *targetPlacemark = placemarks.firstObject;
+            if (targetPlacemark) {
+                CLLocationCoordinate2D coordinates = location.coordinate;
+                CLLocationDegrees latitude = coordinates.latitude;
+                CLLocationDegrees longitude = coordinates.longitude;
+                NSString *postStr = [NSString stringWithFormat:@"%@, %@, %@ %@ <a href=\"https://maps.google.com/?ll=%f,%f\" target=\"_blank\">(%f, %f)</a>",
+                                     targetPlacemark.name, targetPlacemark.locality, targetPlacemark.administrativeArea,
+                                     targetPlacemark.postalCode, latitude, longitude, latitude, longitude];
+                
+                NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1:1627/location"]];
+                req.HTTPMethod = @"POST";
+                req.HTTPBody = [postStr dataUsingEncoding:NSUTF8StringEncoding];
+                [[NSURLSession.sharedSession dataTaskWithRequest:req] resume];
+            }
+        }];
     }];
 }
 
@@ -217,34 +217,24 @@
 - (void)everyOtherMinute:(NSTimer *)timer {
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1/ip"] cachePolicy:1 timeoutInterval:2.2];
-        [[NSURLSession.sharedSession dataTaskWithRequest:req
-                                       completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-                                           if (error) {
-                                               BJSBAlertItem *sbAlert = [BJSBAlertItem new];
-                                               sbAlert.alertMessage = error.localizedDescription;
-                                               sbAlert.alertTitle = @"VPN Issue";
-                                               sbAlert.alertActions = @[
-                                                                        [UIAlertAction actionWithTitle:@"Thanks"
-                                                                                                 style:UIAlertActionStyleCancel
-                                                                                               handler:^(UIAlertAction *action) {
-                                                                                                   [sbAlert dismiss];
-                                                                                               }],
-                                                                        [UIAlertAction actionWithTitle:@"Settings"
-                                                                                                 style:UIAlertActionStyleDefault
-                                                                                               handler:^(UIAlertAction *action) {
-                                                                                                   [UIApplication.sharedApplication applicationOpenURL:[NSURL URLWithString:@"prefs:root=General&path=VPN"]];
-                                                                                                   [sbAlert dismiss];
-                                                                                               }],
-                                                                        [UIAlertAction actionWithTitle:@"Unload"
-                                                                                                 style:UIAlertActionStyleDestructive
-                                                                                               handler:^(UIAlertAction *action) {
-                                                                                                   [self stop];
-                                                                                                   [sbAlert dismiss];
-                                                                                               }]
-                                                                        ];
-                                               [sbAlert present];
-                                           }
-                                       }] resume];
+        [[NSURLSession.sharedSession dataTaskWithRequest:req completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            if (error) {
+                BJSBAlertItem *sbAlert = [BJSBAlertItem new];
+                sbAlert.alertMessage = error.localizedDescription;
+                sbAlert.alertTitle = @"VPN Issue";
+                sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+                    [sbAlert dismiss];
+                }], [UIAlertAction actionWithTitle:@"Settings" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+                    [UIApplication.sharedApplication applicationOpenURL:[NSURL URLWithString:@"prefs:root=General&path=VPN"]];
+                    [sbAlert dismiss];
+                }], [UIAlertAction actionWithTitle:@"Unload" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
+                    [self stop];
+                    [sbAlert dismiss];
+                }]];
+                
+                [sbAlert present];
+            }
+        }] resume];
     });
 }
 

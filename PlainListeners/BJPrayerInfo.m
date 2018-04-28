@@ -36,10 +36,12 @@
         }
         
         _presenting = YES;
+        __weak __typeof(self) weakself = self;
         CLLocationCoordinate2D coordinates = location.coordinate;
         // REST API: https://aladhan.com/prayer-times-api#GetTimings
-        NSString *getStr = [NSString stringWithFormat:@"https://api.aladhan.com/timings/0?method=2&latitude=%f&longitude=%f", coordinates.latitude, coordinates.longitude];
-        [[NSURLSession.sharedSession dataTaskWithURL:[NSURL URLWithString:getStr] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        NSString *restrict endpointTemplate = @"https://api.aladhan.com/timings/0?method=2&latitude=%f&longitude=%f";
+        NSURL *getStr = [NSURL URLWithString:[NSString stringWithFormat:endpointTemplate, coordinates.latitude, coordinates.longitude]];
+        [[NSURLSession.sharedSession dataTaskWithURL:getStr completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (!data) {
                 return;
             }
@@ -60,10 +62,10 @@
             }
             
             BJSBAlertItem *sbAlert = [BJSBAlertItem new];
-            NSDictionary<NSString *, id> *alertAttribs = @{@"NSFont":[UIFont fontWithName:@"Courier" size:14]};
+            NSDictionary<NSString *, id> *alertAttribs = @{ @"NSFont" : [UIFont fontWithName:@"Courier" size:14] };
             
             sbAlert.alertTitle = @"Prayer Info";
-            sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:[self messageForTimings:timings] attributes:alertAttribs];
+            sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:[weakself messageForTimings:timings] attributes:alertAttribs];
             sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:NULL]];
             sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.prayer/Notif";
             [sbAlert present];

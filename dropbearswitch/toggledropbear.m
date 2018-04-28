@@ -4,7 +4,8 @@
 
 #import "../BJSharedInfo.h"
 
-void toggleDropbear(char *load) {
+/// load command sent to launchctl, should be one of "load", "unload"
+static void toggleDropbear(char *load) {
     pid_t pid;
     char *argv[] = { "launchctl", load, kDropbearPath, NULL };
     

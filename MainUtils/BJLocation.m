@@ -42,9 +42,10 @@
         // CLLocationManager -init needs to be on the main thread
         // to avoid returning before being properly initialized, we using dispatch_sync
         // calling dispatch_sync on the same thread will lock that thread
+        __weak __typeof(self) weakself = self;
         void (^setupLocationManager)(void) = ^{
             _locationManager = CLLocationManager.new;
-            _locationManager.delegate = self;
+            _locationManager.delegate = weakself;
         };
         
         if (NSThread.isMainThread) {

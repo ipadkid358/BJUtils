@@ -27,8 +27,9 @@
     
     UIAlertController *alert = self.alertController;
     
+    __weak __typeof(self) weakself = self;
     void (^defaulAlertHandler)(UIAlertAction *action) = ^(UIAlertAction *action) {
-        [self dismiss];
+        [weakself dismiss];
     };
     
     for (UIAlertAction *alertAction in _alertActions) {

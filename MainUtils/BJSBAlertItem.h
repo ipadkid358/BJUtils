@@ -5,14 +5,14 @@
 // alertController must only have properties written to in -configure:requirePasscodeForActions:
 @property (readonly) UIAlertController *alertController;
 
-/*!
+/**
  @brief Absolute path to an image to be presented in the icon area of the notification. Only presented on the lockscreen
  
  @discussion References images should be 20 by 20 points (40x40 @2x, 60x60 @3x)
  */
 @property (getter=_iconImagePath, nonatomic, retain) NSString *iconImagePath;
 
-/*!
+/**
  @brief Absolute path to an image to be presented in the bottom right corner of the notification. Only presented on the lockscreen
  
  @discussion References images should be 20 by 20 points (40x40 @2x, 60x60 @3x)

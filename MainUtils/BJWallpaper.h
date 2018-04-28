@@ -12,7 +12,7 @@ typedef NS_ENUM(NSUInteger, PLStaticWallpaperLocation) {
 /// Optionally posts set wallpapers to my server (based on shouldPost property)
 @interface BJWallpaper : NSObject <LAListener>
 
-/*!
+/**
  @brief Shared instance for convenience purposes
  
  @returns Wallpaper shared instance
@@ -25,14 +25,14 @@ typedef NS_ENUM(NSUInteger, PLStaticWallpaperLocation) {
 /// URL from which the wallpaper with be downloaded from
 @property (nonatomic) NSURL *wallpaperEndpoint;
 
-/*!
+/**
  @brief Fetches a new wallpaper from the wallpaperEndpoint and sets it to location
  
  @param location Specify lockscreen, homescreen, or both (using bitwise)
  */
 - (void)updateWallpaperForLocation:(PLStaticWallpaperLocation)location;
 
-/*!
+/**
  @brief Retrive the current wallpaper for a location
  
  @param location Specify lockscreen, homescreen, or both (using bitwise, only will work if the wallpaper was set to both locations)

@@ -88,8 +88,10 @@
 }
 
 - (void)accuweatherInfo:(NSString *)locationKey {
+    __weak __typeof(self) weakself = self;
     // REST API: https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/%7BlocationKey%7D
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@kAccuWeatherAPIBase "/currentconditions/v1/%@?details=true&apikey=" kAccuWeatherAPIKey, locationKey]];
+    NSString *restrict urlTemplate = @(kAccuWeatherAPIBase "/currentconditions/v1/%@?details=true&apikey=" kAccuWeatherAPIKey);
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:urlTemplate, locationKey]];
     [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!data || error) {
             return;
@@ -102,7 +104,7 @@
         BJSBAlertItem *sbAlert = [BJSBAlertItem new];
         sbAlert.alertTitle = @"Weather Info";
         sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.weather/Notif";
-        sbAlert.alertMessage = [self parseAccuWeather:informalInfo] ?: @"Failed to parse weather response";
+        sbAlert.alertMessage = [weakself parseAccuWeather:informalInfo] ?: @"Failed to parse weather response";
         sbAlert.attachmentImagePath = [@"/Library/Application Support/BJSupport/WeatherIcons" stringByAppendingPathComponent:weatherCode.stringValue];
         
         sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"More Info" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
@@ -120,6 +122,7 @@
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
     _presenting = NO;
+    __weak __typeof(self) weakself = self;
     [_locationInstance showFetch:YES callBlock:^(CLLocation *location) {
         if (_presenting) {
             return;
@@ -128,7 +131,8 @@
         _presenting = YES;
         CLLocationCoordinate2D coordinates = location.coordinate;
         // REST API: https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/geoposition/search
-        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@kAccuWeatherAPIBase "/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=" kAccuWeatherAPIKey, coordinates.latitude, coordinates.longitude]];
+        NSString *restrict urlTemplate = @(kAccuWeatherAPIBase "/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=" kAccuWeatherAPIKey);
+        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:urlTemplate, coordinates.latitude, coordinates.longitude]];
         [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (!data || error) {
                 return;
@@ -141,7 +145,7 @@
             
             NSString *locationKey = parsed[@"Key"];
             if (locationKey) {
-                [self accuweatherInfo:locationKey];
+                [weakself accuweatherInfo:locationKey];
             }
         }] resume];
     }];

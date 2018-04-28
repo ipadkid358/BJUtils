@@ -42,9 +42,10 @@
         [LASharedActivator registerListener:ret forName:@"com.ipadkid.wallpaper"];
         [ret updateEndpoint];
         
+        __weak __typeof(ret) weakself = ret;
         int notifyRegToken;
         notify_register_dispatch("com.ipadkid.bjutils/wallpaper", &notifyRegToken, dispatch_get_main_queue(), ^(int token) {
-            [ret updateEndpoint];
+            [weakself updateEndpoint];
         });
     });
     
@@ -52,12 +53,12 @@
 }
 
 - (void)updateEndpoint {
-    self.wallpaperEndpoint = [_defaults URLForKey:@"BJWImageURL"] ?: [NSURL URLWithString:@"https://source.unsplash.com/random"];
+    // use the link from Preferences, but if it can't be parsed, fall back to Unsplash
+    _wallpaperEndpoint = [_defaults URLForKey:@"BJWImageURL"] ?: [NSURL URLWithString:@"https://source.unsplash.com/random"];
 }
 
 - (void)updateWallpaperForLocation:(PLStaticWallpaperLocation)location {
     @autoreleasepool {
-        // use the link from Preferences, but if it can't be parsed, fall back to Unsplash
         [[NSURLSession.sharedSession dataTaskWithURL:_wallpaperEndpoint completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             if (!data) {
                 return;

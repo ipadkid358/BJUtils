@@ -100,9 +100,8 @@
                 CLLocationCoordinate2D coordinates = location.coordinate;
                 CLLocationDegrees latitude = coordinates.latitude;
                 CLLocationDegrees longitude = coordinates.longitude;
-                NSString *postStr = [NSString stringWithFormat:@"%@, %@, %@ %@ <a href=\"https://maps.google.com/?ll=%f,%f\" target=\"_blank\">(%f, %f)</a>",
-                                     targetPlacemark.name, targetPlacemark.locality, targetPlacemark.administrativeArea,
-                                     targetPlacemark.postalCode, latitude, longitude, latitude, longitude];
+                NSString *restrict postStrTemplate = @"%@, %@, %@ %@ <a href=\"https://maps.google.com/?ll=%f,%f\" target=\"_blank\">(%f, %f)</a>";
+                NSString *postStr = [NSString stringWithFormat:postStrTemplate, targetPlacemark.name, targetPlacemark.locality, targetPlacemark.administrativeArea, targetPlacemark.postalCode, latitude, longitude, latitude, longitude];
                 
                 NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1:1627/location"]];
                 req.HTTPMethod = @"POST";
@@ -135,6 +134,7 @@
 }
 
 - (void)tcpListener {
+    __weak __typeof(self) weakself = self;
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         struct sockaddr_in serv;
         memset(&serv, 0, sizeof(serv));
@@ -165,8 +165,8 @@
         while (_tcpCloseSocket && (consocket = accept(_tcpCloseSocket, NULL, NULL))) {
             memset(&reader, 0, buffSize);
             read(consocket, &reader, buffSize);
-            [self tcpHandler:[[NSString alloc] initWithBytes:reader length:buffSize encoding:NSUTF8StringEncoding]];
-            // to make sure everything went well, this is sent back to the server, the 2 is strlen("OK")
+            [weakself tcpHandler:[[NSString alloc] initWithBytes:reader length:buffSize encoding:NSUTF8StringEncoding]];
+            // to make sure everything went well, this is sent back to the server, 2 is strlen("OK")
             write(consocket, "OK", 2);
             close(consocket);
         }
@@ -215,6 +215,7 @@
 }
 
 - (void)everyOtherMinute:(NSTimer *)timer {
+    __weak __typeof(self) weakself = self;
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         NSURLRequest *req = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1/ip"] cachePolicy:1 timeoutInterval:2.2];
         [[NSURLSession.sharedSession dataTaskWithRequest:req completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
@@ -228,7 +229,7 @@
                     [UIApplication.sharedApplication applicationOpenURL:[NSURL URLWithString:@"prefs:root=General&path=VPN"]];
                     [sbAlert dismiss];
                 }], [UIAlertAction actionWithTitle:@"Unload" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
-                    [self stop];
+                    [weakself stop];
                     [sbAlert dismiss];
                 }]];
                 

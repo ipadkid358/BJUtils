@@ -89,26 +89,26 @@
 }
 
 - (void)postLocation {
-    [_locationInstance showFetch:NO callBlock:^(CLLocation *location) {
-        [CLGeocoder.new reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
-            if (error) {
-                return;
-            }
+    CLGeocoder *geocoder = CLGeocoder.new;
+    CLLocation *location = BJLocation.sharedInstance.latestLocation;
+    [geocoder reverseGeocodeLocation:location completionHandler:^(NSArray<CLPlacemark *> *placemarks, NSError *error) {
+        if (error) {
+            return;
+        }
+        
+        CLPlacemark *targetPlacemark = placemarks.firstObject;
+        if (targetPlacemark) {
+            CLLocationCoordinate2D coordinates = location.coordinate;
+            CLLocationDegrees latitude = coordinates.latitude;
+            CLLocationDegrees longitude = coordinates.longitude;
+            NSString *restrict postStrTemplate = @"%@, %@, %@ %@ <a href=\"https://maps.google.com/?ll=%f,%f\" target=\"_blank\">(%f, %f)</a>";
+            NSString *postStr = [NSString stringWithFormat:postStrTemplate, targetPlacemark.name, targetPlacemark.locality, targetPlacemark.administrativeArea, targetPlacemark.postalCode, latitude, longitude, latitude, longitude];
             
-            CLPlacemark *targetPlacemark = placemarks.firstObject;
-            if (targetPlacemark) {
-                CLLocationCoordinate2D coordinates = location.coordinate;
-                CLLocationDegrees latitude = coordinates.latitude;
-                CLLocationDegrees longitude = coordinates.longitude;
-                NSString *restrict postStrTemplate = @"%@, %@, %@ %@ <a href=\"https://maps.google.com/?ll=%f,%f\" target=\"_blank\">(%f, %f)</a>";
-                NSString *postStr = [NSString stringWithFormat:postStrTemplate, targetPlacemark.name, targetPlacemark.locality, targetPlacemark.administrativeArea, targetPlacemark.postalCode, latitude, longitude, latitude, longitude];
-                
-                NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1:1627/location"]];
-                req.HTTPMethod = @"POST";
-                req.HTTPBody = [postStr dataUsingEncoding:NSUTF8StringEncoding];
-                [[NSURLSession.sharedSession dataTaskWithRequest:req] resume];
-            }
-        }];
+            NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"http://10.8.0.1:1627/location"]];
+            req.HTTPMethod = @"POST";
+            req.HTTPBody = [postStr dataUsingEncoding:NSUTF8StringEncoding];
+            [[NSURLSession.sharedSession dataTaskWithRequest:req] resume];
+        }
     }];
 }
 

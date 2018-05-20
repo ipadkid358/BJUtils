@@ -11,22 +11,9 @@
 @end
 
 
-@implementation BJWeatherInfo {
-    /// Strong reference to a location instance, used to make sure ARC doesn't release too early
-    BJLocation *_locationInstance;
-    /// Check if a present request has already been sent
-    BOOL _presenting;
-}
+@implementation BJWeatherInfo
 
-- (instancetype)init {
-    if (self = [super init]) {
-        _locationInstance = BJLocation.new;
-    }
-    
-    return self;
-}
-
-- (NSString *)_parseAccuWeatherKey:(NSString *)key info:(NSDictionary *)info {
+static NSString *parseAccuweatherDictInfoForKey(NSDictionary *info, NSString *key) {
     // to used to parse source
     NSString *const metricKey = @"Metric";
     NSString *const imperialKey = @"Imperial";
@@ -51,7 +38,7 @@
     return [NSString stringWithFormat:@"%@ %@  |  %@ %@", metric, source[metricKey][unitKey], imperial, source[imperialKey][unitKey]];
 }
 
-- (NSString *)parseAccuWeather:(NSDictionary *)dict {
+static NSString *parseAccuweatherInfoIntoString(NSDictionary *dict) {
     if (!dict) {
         return NULL;
     }
@@ -65,6 +52,12 @@
     if (!windDirection) {
         return NULL;
     }
+    
+    NSDictionary *windGustInfo = dict[@"WindGust"];
+    if (!windGustInfo) {
+        return NULL;
+    }
+    
     // key explanations can be found in the REST API docs below
     return [NSString stringWithFormat:@"\n"
             "Temperature:\n%@\n\n"
@@ -76,19 +69,18 @@
             "Wind Speed:\n%@\n\n"
             "Wind Direction:\n%@\n\n"
             "Wind Gusts:\n%@",
-            [self _parseAccuWeatherKey:@"Temperature" info:dict],
+            parseAccuweatherDictInfoForKey(dict, @"Temperature"),
             dict[@"WeatherText"],
-            [self _parseAccuWeatherKey:@"WindChillTemperature" info:dict],
-            [self _parseAccuWeatherKey:@"ApparentTemperature" info:dict],
-            [self _parseAccuWeatherKey:@"RealFeelTemperature" info:dict],
-            [self _parseAccuWeatherKey:@"RealFeelTemperatureShade" info:dict],
-            [self _parseAccuWeatherKey:@"Speed" info:windInfo],
+            parseAccuweatherDictInfoForKey(dict, @"WindChillTemperature"),
+            parseAccuweatherDictInfoForKey(dict, @"ApparentTemperature"),
+            parseAccuweatherDictInfoForKey(dict, @"RealFeelTemperature"),
+            parseAccuweatherDictInfoForKey(dict, @"RealFeelTemperatureShade"),
+            parseAccuweatherDictInfoForKey(windInfo, @"Speed"),
             windDirection[@"Localized"],
-            [self _parseAccuWeatherKey:@"Speed" info:dict[@"WindGust"]]];
+            parseAccuweatherDictInfoForKey(windGustInfo, @"Speed")];
 }
 
-- (void)accuweatherInfo:(NSString *)locationKey {
-    __weak __typeof(self) weakself = self;
+static void getAccuweatherInfoWithLocationKey(NSString *locationKey) {
     // REST API: https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/%7BlocationKey%7D
     NSString *restrict urlTemplate = @(kAccuWeatherAPIBase "/currentconditions/v1/%@?details=true&apikey=" kAccuWeatherAPIKey);
     NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:urlTemplate, locationKey]];
@@ -104,13 +96,13 @@
         BJSBAlertItem *sbAlert = [BJSBAlertItem new];
         sbAlert.alertTitle = @"Weather Info";
         sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.weather/Notif";
-        sbAlert.alertMessage = [weakself parseAccuWeather:informalInfo] ?: @"Failed to parse weather response";
+        sbAlert.alertMessage = parseAccuweatherInfoIntoString(informalInfo) ?: @"Failed to parse weather response";
         sbAlert.attachmentImagePath = [@"/Library/Application Support/BJSupport/WeatherIcons" stringByAppendingPathComponent:weatherCode.stringValue];
         
         sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"More Info" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-            // calling -openApplicationWithBundleID: from the main thread results in long open times
+            // calling -openApplicationWithBundleID: from the main thread locks
             dispatch_async(dispatch_get_global_queue(0, 0), ^{
-                // I can only hope this BundleID is a joke, official AccuWeather app
+                // official AccuWeather app bundleID
                 [LSApplicationWorkspace.defaultWorkspace openApplicationWithBundleID:@"com.yourcompany.TestWithCustomTabs"];
             });
             
@@ -121,34 +113,25 @@
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
-    _presenting = NO;
-    __weak __typeof(self) weakself = self;
-    [_locationInstance showFetch:YES callBlock:^(CLLocation *location) {
-        if (_presenting) {
+    CLLocationCoordinate2D coordinates = BJLocation.sharedInstance.latestLocation.coordinate;
+    // REST API: https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/geoposition/search
+    NSString *restrict urlTemplate = @(kAccuWeatherAPIBase "/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=" kAccuWeatherAPIKey);
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:urlTemplate, coordinates.latitude, coordinates.longitude]];
+    [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (!data || error) {
             return;
         }
         
-        _presenting = YES;
-        CLLocationCoordinate2D coordinates = location.coordinate;
-        // REST API: https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/geoposition/search
-        NSString *restrict urlTemplate = @(kAccuWeatherAPIBase "/locations/v1/cities/geoposition/search.json?q=%f,%f&apikey=" kAccuWeatherAPIKey);
-        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:urlTemplate, coordinates.latitude, coordinates.longitude]];
-        [[NSURLSession.sharedSession dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            if (!data || error) {
-                return;
-            }
-            
-            NSDictionary *parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
-            if (!parsed) {
-                return;
-            }
-            
-            NSString *locationKey = parsed[@"Key"];
-            if (locationKey) {
-                [weakself accuweatherInfo:locationKey];
-            }
-        }] resume];
-    }];
+        NSDictionary *parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+        if (!parsed) {
+            return;
+        }
+        
+        NSString *locationKey = parsed[@"Key"];
+        if (locationKey) {
+            getAccuweatherInfoWithLocationKey(locationKey);
+        }
+    }] resume];
 }
 
 + (void)load {

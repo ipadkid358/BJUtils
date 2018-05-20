@@ -41,6 +41,8 @@
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
     // this does not work in *sandboxed* apps on iOS 10 and newer, possibly only on 64-bit devices
     // works on iPhone 5, iOS 10.3.3, but not 6 Plus, 10.2 (both jailbroken, same app compiled with Xcode)
+    // another method of accessing this information is demoed in the project below, with the same restrictions
+    // https://github.com/ipadkid358/personal-tweaks/blob/master/FullStatusInfo/Tweak.x#L38
     CFMutableDictionaryRef props;
     io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
     IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0);
@@ -60,7 +62,7 @@
     // %.1f indicated 1 decimal place of a float (or double)
     NSMutableString *body = [self parseValues:@[[NSString stringWithFormat:@"%d/%d", cc, mc],
                                                 [NSString stringWithFormat:@"%d/%d", cp, cc],
-                                                [NSString stringWithFormat:@"%.1f °C", ct]]];
+                                                [NSString stringWithFormat:@"%.1f°C", ct]]];
     
     for (BluetoothDevice *bluetoothDevice in BluetoothManager.sharedInstance.connectedDevices) {
         int thisBattery = bluetoothDevice.batteryLevel;
@@ -76,8 +78,8 @@
     BJSBAlertItem *sbAlert = [BJSBAlertItem new];
     sbAlert.alertTitle = @"Battery Info";
     
-    NSDictionary<NSString *, id> *attributes = @{NSFontAttributeName:[UIFont fontWithName:@"Courier" size:14]};
-    sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:body attributes:attributes];
+    NSDictionary<NSString *, id> *alertAttribs = @{ NSFontAttributeName : [UIFont fontWithName:@"Courier" size:14] };
+    sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:body attributes:alertAttribs];
     sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:NULL]];
     sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.battery/Notif";
     [sbAlert present];

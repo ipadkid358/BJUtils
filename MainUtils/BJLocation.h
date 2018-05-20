@@ -1,15 +1,17 @@
 #import <CoreLocation/CoreLocation.h>
 
-/// Convience class for getting location once, if polling location, please use your own class.
-/// Caller must hold a strong reference to the instance for the duration of the location call
+/// Convience class for getting location once, if polling location, please use your own class
 @interface BJLocation : NSObject <CLLocationManagerDelegate>
 
 /**
- @brief Get the current device location, optionally presenting a user alert
+ @brief Shared location instance. A new instance should not be manually created
  
- @param show Show an alert to the user, indicating a location fetch is in progress. Alert is automatically dismissed on fetch completion
- @param block Called on completion with location information
+ @returns Globally used location instance
  */
-- (void)showFetch:(BOOL)show callBlock:(void (^)(CLLocation *location))block;
++ (instancetype)sharedInstance;
+
+// TODO: See if iOS posts a native notification for significat distance changes, otherwise post our own
+/// The current location of the device. This is updated with significant distance changes
+@property (nonatomic, readonly) CLLocation *latestLocation;
 
 @end

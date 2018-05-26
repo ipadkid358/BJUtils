@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 
+/// A TCP server instance that manages requests from my server. All connections are done directly over a VPN
 @interface BJServer : NSObject
 
 /**

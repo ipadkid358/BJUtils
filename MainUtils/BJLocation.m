@@ -5,6 +5,8 @@
 + (void)setAuthorizationStatusByType:(CLAuthorizationStatus)type forBundleIdentifier:(NSString *)bundle;
 @end
 
+NSNotificationName const BJLocationDidChangeNotification = @"BJLocationDidChangeNotification";
+NSString *const BJLocationNewLocationKey = @"BJLocationNewLocationKey";
 
 @implementation BJLocation {
     /// LocationManager of which we are the delegate, need to hold a strong reference to this
@@ -26,6 +28,7 @@
     if (self = [super init]) {
         _locationManager = CLLocationManager.new;
         _locationManager.delegate = self;
+        _locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters;
         
         // bundleID should always be com.apple.springboard, but didn't really want to hard code it
         NSString *bundleID = NSBundle.mainBundle.bundleIdentifier;
@@ -40,12 +43,19 @@
     return self;
 }
 
+- (void)forcePreciseLocationUpdate {
+    [_locationManager requestLocation];
+}
+
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error {
     // Required at runtime, we don't have any error handling right now
 }
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray<CLLocation *> *)locations {
     _latestLocation = locations.lastObject;
+    
+    NSDictionary<NSString *, id> *notifInfo = @{ BJLocationNewLocationKey : _latestLocation };
+    [NSNotificationCenter.defaultCenter postNotificationName:BJLocationDidChangeNotification object:self userInfo:notifInfo];
 }
 
 + (void)load {

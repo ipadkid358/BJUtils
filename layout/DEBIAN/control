@@ -1,6 +1,6 @@
 Package: com.ipadkid.bjutils
 Name: BlackJacket Utilities
-Depends: mobilesubstrate, libactivator, preferenceloader, com.a3tweaks.flipswitch
+Depends: mobilesubstrate, libactivator, preferenceloader
 Version: 0.0.1
 Architecture: iphoneos-arm
 Description: Backend support from SpringBoard to power ipad_kid tools (private)

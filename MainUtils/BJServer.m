@@ -1,8 +1,6 @@
 #import <MediaRemote/MediaRemote.h>
-
 #import <AVFoundation/AVFoundation.h>
 #import <arpa/inet.h>
-#import <notify.h>
 #import <objc/runtime.h>
 
 #import "../BJSharedInfo.h"
@@ -25,16 +23,23 @@
 - (void)setMediaVolume:(float)volume;
 @end
 
-@interface UIApplication (BlackJacketPrivate)
-- (void)applicationOpenURL:(NSURL *)target;
+@interface SBTelephonyManager : NSObject
++ (instancetype)sharedTelephonyManager;
+- (BOOL)isUsingVPNConnection;
 @end
 
+@interface UIApplication (UIApplicationOpenURL)
+- (void)applicationOpenURL:(NSURL *)url;
+@end
+
+/// Key used to check userDefaults to get the persitent load state
+static NSString *kPersistentLoadKey = @"BJPersistantServerLoadKey";
+/// Persisent preferences, used to check server load persistence
+static NSUserDefaults *userDefaults = NULL;
 
 @implementation BJServer {
-    /// Last string posted to the music server, check for duplicates
-    NSString *_lastMusicStringFetch;
     /// Notification ref, used to remove the notification observer
-    id<NSObject> _musicSystemNotif;
+    id<NSObject> _musicNotifToken;
     /// AudioPlayer used to play and stop sounds when triggered by the server
     AVAudioPlayer *_audioPlayer;
     /// Strong reference to a Location instance
@@ -176,14 +181,16 @@
 }
 
 - (void)musicListener {
-    [[NSURLSession.sharedSession dataTaskWithURL:[NSURL URLWithString:@"https://ipadkid.cf/status/music.txt"] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+    static NSString *lastMusicStringFetch = NULL;
+    NSURL *fetchMusicEndpoint = [NSURL URLWithString:@"https://ipadkid.cf/status/music.txt"];
+    [[NSURLSession.sharedSession dataTaskWithURL:fetchMusicEndpoint completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (data) {
-            _lastMusicStringFetch = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            lastMusicStringFetch = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         }
     }] resume];
     
     NSString *notifName = (__bridge NSString *)kMRMediaRemoteNowPlayingInfoDidChangeNotification;
-    _musicSystemNotif = [NSNotificationCenter.defaultCenter addObserverForName:notifName object:NULL queue:NULL usingBlock:^(NSNotification *note) {
+    _musicNotifToken = [NSNotificationCenter.defaultCenter addObserverForName:notifName object:NULL queue:NULL usingBlock:^(NSNotification *note) {
         SBMediaController *mediaController = [objc_getClass("SBMediaController") sharedInstance];
         NSString *playingApp = mediaController.nowPlayingApplication.bundleIdentifier;
         // only report audio from YouTube Music
@@ -201,7 +208,7 @@
             }
             
             NSString *newMusic = [NSString stringWithFormat:@"%@ by %@", songName, artistName];
-            if ([newMusic isEqualToString:_lastMusicStringFetch]) {
+            if ([newMusic isEqualToString:lastMusicStringFetch]) {
                 return;
             }
             
@@ -209,7 +216,7 @@
             req.HTTPMethod = @"POST";
             req.HTTPBody = [newMusic dataUsingEncoding:NSUTF8StringEncoding];
             [[NSURLSession.sharedSession dataTaskWithRequest:req] resume];
-            _lastMusicStringFetch = newMusic;
+            lastMusicStringFetch = newMusic;
         });
     }];
 }
@@ -244,15 +251,16 @@
         return NO;
     }
     
+    [userDefaults setBool:NO forKey:kPersistentLoadKey];
+    
     // tcpListener
     close(_tcpCloseSocket);
     _tcpCloseSocket = 0;
     
     // musicListener
-    _lastMusicStringFetch = NULL;
-    if (_musicSystemNotif) {
-        [NSNotificationCenter.defaultCenter removeObserver:_musicSystemNotif];
-        _musicSystemNotif = NULL;
+    if (_musicNotifToken) {
+        [NSNotificationCenter.defaultCenter removeObserver:_musicNotifToken];
+        _musicNotifToken = NULL;
     }
     
     // everyOtherMinute
@@ -284,6 +292,7 @@
     _minuteTimer = [NSTimer scheduledTimerWithTimeInterval:120 target:self selector:@selector(everyOtherMinute:) userInfo:NULL repeats:YES];
     
     BJWallpaper.sharedInstance.shouldPost = YES;
+    [userDefaults setBool:YES forKey:kPersistentLoadKey];
     
     return YES;
 }
@@ -292,7 +301,18 @@
 + (void)load {
     // make sure all classes are added into the runtime before making objc_getClass calls
     dispatch_async(dispatch_get_main_queue(), ^{
-        [BJServer.sharedInstance start];
+        BJServer *server = BJServer.sharedInstance;
+        userDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
+        if ((BJWallpaper.sharedInstance.shouldPost = [userDefaults boolForKey:kPersistentLoadKey])) {
+            [server start];
+        }
+        
+        [NSNotificationCenter.defaultCenter addObserverForName:@"SBVPNConnectionChangedNotification" object:NULL queue:NULL usingBlock:^(NSNotification *note) {
+            SBTelephonyManager *telephoneInfo = [objc_getClass("SBTelephonyManager") sharedTelephonyManager];
+            if (telephoneInfo.isUsingVPNConnection) {
+                [server start];
+            }
+        }];
     });
 }
 

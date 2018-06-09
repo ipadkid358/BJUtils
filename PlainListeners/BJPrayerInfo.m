@@ -19,70 +19,49 @@
 
 // MARK: Fast number formatting
 #define patchDegreeAngle(v) ((v)-360.0*(floor((v)/360.0)))
-#define patchTimeHour(v) ((v)-24.0*floor((v)/24.0))
 
+#define formatPrayerTime(t) [dateFormatter stringFromDate:[NSDate dateWithTimeIntervalSinceReferenceDate:((dayReferenceStart) + (secsPerHour*(t)))]]
 
 @implementation BJPrayerInfo
 
 /// Calculate the current julian date
-static NSTimeInterval get_julian_date() {
+static NSTimeInterval calculateJulianDate() {
     const NSTimeInterval secsPerDay = 60 * 60 * 24;
-    const NSTimeInterval julian_epoch = 2440588;
+    const NSTimeInterval julianEpoch = 2440588;
+    const NSTimeInterval nowTime = NSDate.date.timeIntervalSince1970;
     
-    double days = floor(NSDate.date.timeIntervalSince1970/secsPerDay);
-    double jd = julian_epoch + days - 0.5; // 0.5 offsets rounding errors
+    double days = floor(nowTime/secsPerDay);
     
-    return jd;
+    return julianEpoch + days - 0.5; // 0.5 offsets rounding errors;
 }
 
 /// Given a multiplier, calculate the lenght of a shadow at a latitude and sun declination
-static double shadow_length_calculation(double length, double lat, double declination) {
-    double top = -dsin(length)-dsin(lat)*dsin(declination);
-    double bot = dcos(lat)*dcos(declination);
-    double calc = darccos(top/bot);
-    return calc/15;
+static double calculateShadowLength(double angle, double lat, double declination) {
+    return darccos((-dsin(angle) - dsin(lat)*dsin(declination)) / (dcos(lat)*dcos(declination)))/15;
 }
 
 /// Calculate Asr prayer time under ISNA ruling for latitude and sun declination
-static double calculate_asr_prayer(double lat, double declination) {
-    double a = -darccot(1 + dtan(ABS(lat-declination)));
-    double t = darccos((-dsin(a)- dsin(declination)* dsin(lat))/ (dcos(declination) * dcos(lat)));
-    return t/15;
+static double calculateAsrOffset(double lat, double declination) {
+    const unsigned calcOffset = 1;
+    return darccos((-dsin(-darccot(calcOffset + dtan(ABS(lat-declination)))) - dsin(declination)*dsin(lat)) / (dcos(declination)*dcos(lat)))/15;
 }
 
 // http://aa.usno.navy.mil/faq/docs/SunApprox.php
 /// Calculation the sun declination and equation of time using the current julian date (calculated internally)
-static void get_sun_declination_eqT(double *declination, double *eqT) {
-    double jd = get_julian_date();
+static void calculateDeclinationEquationOfTime(double *declination, double *eqT) {
+    const double julianDate = calculateJulianDate();
     
-    const double D = jd - 2451545;
+    const double julianReferenceDate = julianDate - 2451545;
     
-    double g = patchDegreeAngle(357.529 + 0.98560028 * D);
-    double q = patchDegreeAngle(280.459 + 0.98564736 * D);
-    double L = patchDegreeAngle(q + 1.915 * dsin(g) + 0.020 * dsin(2*g));
+    double sunAnomly = patchDegreeAngle(357.529 + 0.98560028 * julianReferenceDate);
+    double sunLng = patchDegreeAngle(280.459 + 0.98564736 * julianReferenceDate);
+    double eclipticLng = patchDegreeAngle(sunLng + 1.915 * dsin(sunAnomly) + 0.020 * dsin(2*sunAnomly));
     
-    double e = 23.439 - 0.00000036 * D;
-    *declination = darcsin(dsin(e) * dsin(L));
+    double e = 23.439 - 0.00000036 * julianReferenceDate;
+    *declination = darcsin(dsin(e) * dsin(eclipticLng));
     
-    double RA = darctan2(dcos(e) * dsin(L), dcos(L))/15;
-    *eqT = q/15 - patchTimeHour(RA);
-}
-
-/// Convert timing representations to human readable, 12 hour time format (am-pm suffix not included)
-static NSString *create_float_time12(double time) {
-    if (isnan(time)) {
-        return NULL;
-    }
-    
-    time = patchTimeHour(time + 1/120.0);
-    double hours = floor(time);
-    double minutes = floor((time - hours) * 60);
-    
-    hours += 11;
-    int hrs = (int)hours % 12;
-    hrs += 1;
-    
-    return [NSString stringWithFormat:@"% 2d:%02.0f", hrs, minutes];
+    double rightAscension = darctan2(dcos(e) * dsin(eclipticLng), dcos(eclipticLng))/15;
+    *eqT = sunLng/15 - rightAscension;
 }
 
 // in accordance to http://praytimes.org/calculation under ISNA rulings
@@ -93,28 +72,37 @@ static NSString *calculatePrayerTimesUsingLatLongAlt(CLLocationDegrees lat, CLLo
     const double isha_angle = 15;
     
     double declination, eqT;
-    get_sun_declination_eqT(&declination, &eqT);
+    calculateDeclinationEquationOfTime(&declination, &eqT);
     
-    double dhuhr_prayer = 12 - eqT;
+    NSTimeInterval dhuhrTime = 12 - eqT;
     
-    const double altitude_offset = shadow_length_calculation(0.833 + 0.0347 * sqrt(alt), lat, declination);
+    const NSTimeInterval altitudeOffset = calculateShadowLength(0.833 + 0.0347 * sqrt(alt), lat, declination);
     
-    double sunrise_time = dhuhr_prayer - altitude_offset; // end of fajr
-    double sunset_time = dhuhr_prayer + altitude_offset; // maghrib
+    NSTimeInterval sunriseTime = dhuhrTime - altitudeOffset; // end of fajr
+    NSTimeInterval sunsetTime = dhuhrTime + altitudeOffset; // maghrib
     
-    double fajr_prayer = dhuhr_prayer - shadow_length_calculation(fajr_angle, lat, declination);
-    double isha_prayer = dhuhr_prayer + shadow_length_calculation(isha_angle, lat, declination);
+    NSTimeInterval fajrTime = dhuhrTime - calculateShadowLength(fajr_angle, lat, declination);
+    NSTimeInterval ishaTime = dhuhrTime + calculateShadowLength(isha_angle, lat, declination);
     
-    double asr_prayer = dhuhr_prayer + calculate_asr_prayer(lat, declination);
+    NSTimeInterval asrTime = dhuhrTime + calculateAsrOffset(lat, declination);
     
-    double timezone_offset = NSTimeZone.localTimeZone.secondsFromGMT/3600.0 - lng/15.0;
+    NSInteger timezone = NSTimeZone.localTimeZone.secondsFromGMT;
+    const double secsPerHour = 60 * 60;
+    NSTimeInterval timezoneOffset = timezone/secsPerHour - lng/15.0 + 1/120.0;
     
-    fajr_prayer  += timezone_offset;
-    sunrise_time += timezone_offset;
-    dhuhr_prayer += timezone_offset;
-    asr_prayer   += timezone_offset;
-    sunset_time  += timezone_offset;
-    isha_prayer  += timezone_offset;
+    fajrTime    += timezoneOffset;
+    sunriseTime += timezoneOffset;
+    dhuhrTime   += timezoneOffset;
+    asrTime     += timezoneOffset;
+    sunsetTime  += timezoneOffset;
+    ishaTime    += timezoneOffset;
+    
+    const double secsPerDay = secsPerHour * 24;
+    double daysSinceRegerenceDate = floor(NSDate.date.timeIntervalSinceReferenceDate/secsPerDay);
+    NSTimeInterval dayReferenceStart = daysSinceRegerenceDate*secsPerDay - timezone;
+    
+    NSDateFormatter *dateFormatter = [NSDateFormatter new];
+    dateFormatter.timeStyle = NSDateFormatterShortStyle;
     
     return [NSString stringWithFormat:@""
             @"\nFajr start: %@"
@@ -123,12 +111,12 @@ static NSString *calculatePrayerTimesUsingLatLongAlt(CLLocationDegrees lat, CLLo
             @"\nAsr:        %@"
             @"\nMaghrib:    %@"
             @"\nIsha:       %@",
-            create_float_time12(fajr_prayer),
-            create_float_time12(sunrise_time),
-            create_float_time12(dhuhr_prayer),
-            create_float_time12(asr_prayer),
-            create_float_time12(sunset_time),
-            create_float_time12(isha_prayer)];
+            formatPrayerTime(fajrTime),
+            formatPrayerTime(sunriseTime),
+            formatPrayerTime(dhuhrTime),
+            formatPrayerTime(asrTime),
+            formatPrayerTime(sunsetTime),
+            formatPrayerTime(ishaTime)];
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {

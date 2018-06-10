@@ -85,7 +85,7 @@
 
 - (UIImage *)wallpaperForLocation:(PLStaticWallpaperLocation)location {
     SBWallpaperController *wallpaperController = [objc_getClass("SBWallpaperController") sharedInstance];
-    SBFWallpaperView *wallpaperView;
+    SBFWallpaperView *wallpaperView = NULL;
     
     switch (location) {
         case PLStaticWallpaperLocationHomescreen:

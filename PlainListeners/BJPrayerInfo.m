@@ -17,23 +17,12 @@
 #define darccot(v) r2d(atan(1/(v)))
 #define darctan2(v, m) r2d(atan2(v, m))
 
-// MARK: Fast number formatting
-#define patchDegreeAngle(v) ((v)-360.0*(floor((v)/360.0)))
-
 #define formatPrayerTime(t) [dateFormatter stringFromDate:[NSDate dateWithTimeIntervalSinceReferenceDate:((dayReferenceStart) + (secsPerHour*(t)))]]
 
-@implementation BJPrayerInfo
+// The difference between the normal reference date and the julian reference date in julian units
+#define julianReferenceDateDifference 365.5
 
-/// Calculate the current julian date
-static NSTimeInterval calculateJulianDate() {
-    const NSTimeInterval secsPerDay = 60 * 60 * 24;
-    const NSTimeInterval julianEpoch = 2440588;
-    const NSTimeInterval nowTime = NSDate.date.timeIntervalSince1970;
-    
-    double days = floor(nowTime/secsPerDay);
-    
-    return julianEpoch + days - 0.5; // 0.5 offsets rounding errors;
-}
+@implementation BJPrayerInfo
 
 /// Given a multiplier, calculate the lenght of a shadow at a latitude and sun declination
 static double calculateShadowLength(double angle, double lat, double declination) {
@@ -42,26 +31,53 @@ static double calculateShadowLength(double angle, double lat, double declination
 
 /// Calculate Asr prayer time under ISNA ruling for latitude and sun declination
 static double calculateAsrOffset(double lat, double declination) {
-    const unsigned calcOffset = 1;
+    const double calcOffset = 1.0;
     return darccos((-dsin(-darccot(calcOffset + dtan(ABS(lat-declination)))) - dsin(declination)*dsin(lat)) / (dcos(declination)*dcos(lat)))/15;
 }
 
 // http://aa.usno.navy.mil/faq/docs/SunApprox.php
 /// Calculation the sun declination and equation of time using the current julian date (calculated internally)
 static void calculateDeclinationEquationOfTime(double *declination, double *eqT) {
-    const double julianDate = calculateJulianDate();
+    const NSTimeInterval secsPerDay = 60 * 60 * 24;
+    const NSTimeInterval gregorianReferenceDate = NSDate.date.timeIntervalSinceReferenceDate;
+    const NSTimeInterval julianReferenceDate = ((gregorianReferenceDate/secsPerDay) + julianReferenceDateDifference);
     
-    const double julianReferenceDate = julianDate - 2451545;
+    const double sunAnomaly = 357.529 + 0.98560028 * julianReferenceDate;
+    const double sunLongitude = 280.459 + 0.98564736 * julianReferenceDate;
+    const double eclipticLng = sunLongitude + 1.915 * dsin(sunAnomaly) + 0.020 * dsin(2*sunAnomaly);
     
-    double sunAnomly = patchDegreeAngle(357.529 + 0.98560028 * julianReferenceDate);
-    double sunLng = patchDegreeAngle(280.459 + 0.98564736 * julianReferenceDate);
-    double eclipticLng = patchDegreeAngle(sunLng + 1.915 * dsin(sunAnomly) + 0.020 * dsin(2*sunAnomly));
+    const double eclipObliquity = 23.439 - 0.00000036 * julianReferenceDate;
+    *declination = darcsin(dsin(eclipObliquity) * dsin(eclipticLng));
     
-    double e = 23.439 - 0.00000036 * julianReferenceDate;
-    *declination = darcsin(dsin(e) * dsin(eclipticLng));
+    const double rightAscension = darctan2(dcos(eclipObliquity) * dsin(eclipticLng), dcos(eclipticLng))/15;
+    *eqT = sunLongitude/15 - rightAscension;
+}
+
+static NSString *formatIntoMonospacedBlock(NSArray<NSString *> *values) {
+    NSArray<NSString *> *keys = @[@"Fajr start", @"Fajr end", @"Dhuhr", @"Asr", @"Maghrib", @"Isha"];
+    NSUInteger dictSize = keys.count;
+    if (dictSize != values.count) {
+        return NULL;
+    }
     
-    double rightAscension = darctan2(dcos(e) * dsin(eclipticLng), dcos(eclipticLng))/15;
-    *eqT = sunLng/15 - rightAscension;
+    NSUInteger lengths[dictSize];
+    
+    NSUInteger maxLen = 0;
+    for (int i = 0; i < dictSize; i++) {
+        NSUInteger thisLen = [keys[i] length] + [values[i] length];
+        maxLen = MAX(maxLen, thisLen);
+        lengths[i] = thisLen;
+    }
+    
+    NSMutableString *ret = [NSMutableString string];
+    NSString *blankString = @"";
+    NSString *spaceString = @" ";
+    for (int i = 0; i < dictSize; i++) {
+        NSString *padding = [blankString stringByPaddingToLength:(maxLen - lengths[i]) withString:spaceString startingAtIndex:0];
+        [ret appendFormat:@"\n%@:%@ %@", keys[i], padding, values[i]];
+    }
+    
+    return [NSString stringWithString:ret];
 }
 
 // in accordance to http://praytimes.org/calculation under ISNA rulings
@@ -104,19 +120,14 @@ static NSString *calculatePrayerTimesUsingLatLongAlt(CLLocationDegrees lat, CLLo
     NSDateFormatter *dateFormatter = [NSDateFormatter new];
     dateFormatter.timeStyle = NSDateFormatterShortStyle;
     
-    return [NSString stringWithFormat:@""
-            @"\nFajr start: %@"
-            @"\nFajr end:   %@"
-            @"\nDhuhr:      %@"
-            @"\nAsr:        %@"
-            @"\nMaghrib:    %@"
-            @"\nIsha:       %@",
-            formatPrayerTime(fajrTime),
-            formatPrayerTime(sunriseTime),
-            formatPrayerTime(dhuhrTime),
-            formatPrayerTime(asrTime),
-            formatPrayerTime(sunsetTime),
-            formatPrayerTime(ishaTime)];
+    return formatIntoMonospacedBlock(@[
+               formatPrayerTime(fajrTime),
+               formatPrayerTime(sunriseTime),
+               formatPrayerTime(dhuhrTime),
+               formatPrayerTime(asrTime),
+               formatPrayerTime(sunsetTime),
+               formatPrayerTime(ishaTime)
+           ]);
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event {
@@ -131,6 +142,7 @@ static NSString *calculatePrayerTimesUsingLatLongAlt(CLLocationDegrees lat, CLLo
     sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:NULL]];
     sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.prayer/Notif";
     [sbAlert present];
+    event.handled = YES;
 }
 
 + (void)load {

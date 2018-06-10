@@ -20,7 +20,7 @@ typedef NS_ENUM(NSUInteger, PLStaticWallpaperLocation) {
 + (instancetype)sharedInstance;
 
 /// Whether the new wallpapers should be sent to the server
-@property BOOL shouldPost;
+@property (nonatomic) BOOL shouldPost;
 
 /// URL from which the wallpaper with be downloaded from
 @property (nonatomic) NSURL *wallpaperEndpoint;

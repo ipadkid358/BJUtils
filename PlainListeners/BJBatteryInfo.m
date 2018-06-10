@@ -19,20 +19,28 @@
 
 @implementation BJBatteryInfo
 
-- (NSMutableString *)parseValues:(NSArray<NSString *> *)values {
+static NSMutableString *parseValuesIntoMonospacedBlock(NSArray<NSString *> *values) {
     NSArray<NSString *> *keys = @[@"Capacity", @"Charge", @"Temperature"];
-    NSMutableArray<NSNumber *> *lengths = [NSMutableArray new];
-    NSUInteger maxLen = 0;
-    for (int i = 0; i < 3; i++) {
-        NSUInteger thisLen = [keys[i] length] + [values[i] length];
-        maxLen = MAX(maxLen, thisLen);
-        [lengths addObject:[NSNumber numberWithUnsignedInteger:thisLen]];
+    NSUInteger dictSize = keys.count;
+    if (dictSize != values.count) {
+        return NULL;
     }
     
-    NSMutableString *ret = [NSMutableString new];
-    for (int i = 0; i < 3; i++) {
-        NSUInteger pad = maxLen - [lengths[i] unsignedIntegerValue];
-        [ret appendFormat:@"\n%@:%@ %@", keys[i], [NSString.string stringByPaddingToLength:pad withString:@" " startingAtIndex:0], values[i]];
+    NSUInteger lengths[dictSize];
+    
+    NSUInteger maxLen = 0;
+    for (int i = 0; i < dictSize; i++) {
+        NSUInteger thisLen = [keys[i] length] + [values[i] length];
+        maxLen = MAX(maxLen, thisLen);
+        lengths[i] = thisLen;
+    }
+    
+    NSMutableString *ret = [NSMutableString string];
+    NSString *blankString = @"";
+    NSString *spaceString = @" ";
+    for (int i = 0; i < dictSize; i++) {
+        NSString *padding = [blankString stringByPaddingToLength:(maxLen - lengths[i]) withString:spaceString startingAtIndex:0];
+        [ret appendFormat:@"\n%@:%@ %@", keys[i], padding, values[i]];
     }
     
     return ret;
@@ -60,9 +68,11 @@
     float ct = celsiusTemp.floatValue/100;
     
     // %.1f indicated 1 decimal place of a float (or double)
-    NSMutableString *body = [self parseValues:@[[NSString stringWithFormat:@"%d/%d", cc, mc],
-                                                [NSString stringWithFormat:@"%d/%d", cp, cc],
-                                                [NSString stringWithFormat:@"%.1f°C", ct]]];
+    NSMutableString *body = parseValuesIntoMonospacedBlock(@[
+         [NSString stringWithFormat:@"%d/%d", cc, mc],
+         [NSString stringWithFormat:@"%d/%d", cp, cc],
+         [NSString stringWithFormat:@"%.1f°C", ct]
+    ]);
     
     for (BluetoothDevice *bluetoothDevice in BluetoothManager.sharedInstance.connectedDevices) {
         int thisBattery = bluetoothDevice.batteryLevel;
@@ -75,14 +85,15 @@
         [body appendFormat:@"\n\n%@: %d%%", bluetoothDevice.name, thisBattery];
     }
     
+    NSDictionary<NSString *, id> *alertAttribs = @{ NSFontAttributeName : [UIFont fontWithName:@"Courier" size:14] };
+
     BJSBAlertItem *sbAlert = [BJSBAlertItem new];
     sbAlert.alertTitle = @"Battery Info";
-    
-    NSDictionary<NSString *, id> *alertAttribs = @{ NSFontAttributeName : [UIFont fontWithName:@"Courier" size:14] };
     sbAlert.alertAttributedMessage = [[NSAttributedString alloc] initWithString:body attributes:alertAttribs];
     sbAlert.alertActions = @[[UIAlertAction actionWithTitle:@"Thanks" style:UIAlertActionStyleCancel handler:NULL]];
     sbAlert.iconImagePath = @"/Library/Activator/Listeners/com.ipadkid.battery/Notif";
     [sbAlert present];
+    event.handled = YES;
 }
 
 + (void)load {

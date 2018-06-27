@@ -3,12 +3,8 @@
 /// A TCP server instance that manages requests from my server. All connections are done directly over a VPN
 @interface BJServer : NSObject
 
-/**
- @brief Shared server instance. A new server should not be manually created
- 
- @returns Globally used server instance
- */
-+ (instancetype)sharedInstance;
+/// Shared server instance. A new instance should not be manually created
+@property (class, readonly, strong) BJServer *sharedInstance;
 
 /**
  @brief Start running the server. Handles starting all relavent notifications

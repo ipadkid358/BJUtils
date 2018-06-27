@@ -42,8 +42,6 @@ static NSUserDefaults *userDefaults = NULL;
     id<NSObject> _musicNotifToken;
     /// AudioPlayer used to play and stop sounds when triggered by the server
     AVAudioPlayer *_audioPlayer;
-    /// Strong reference to a Location instance
-    BJLocation *_locationInstance;
     /// Timer used to check VPN every two minutes, used to stop the timer
     NSTimer *_minuteTimer;
     /// If the server is currently loaded, used to disallow multiple starts
@@ -61,6 +59,13 @@ static NSUserDefaults *userDefaults = NULL;
     });
     
     return ret;
+}
+
+- (instancetype)init {
+    if (self = [super init]) {
+        force_shared_instace_runtime;
+    }
+    return self;
 }
 
 - (void)startAudio {
@@ -270,9 +275,6 @@ static NSUserDefaults *userDefaults = NULL;
     // turn off posts for wallpaper
     BJWallpaper.sharedInstance.shouldPost = NO;
     
-    // free memory
-    _locationInstance = NULL;
-    
     // set unloaded
     _isLoaded = NO;
     return YES;
@@ -286,8 +288,6 @@ static NSUserDefaults *userDefaults = NULL;
     _isLoaded = YES;
     [self tcpListener];
     [self musicListener];
-    
-    _locationInstance = [BJLocation new];
     
     _minuteTimer = [NSTimer scheduledTimerWithTimeInterval:120 target:self selector:@selector(everyOtherMinute:) userInfo:NULL repeats:YES];
     

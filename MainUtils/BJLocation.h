@@ -3,12 +3,8 @@
 /// Convience singlton for getting location easily. Notifications are posted with the location on significant distance changes
 @interface BJLocation : NSObject <CLLocationManagerDelegate>
 
-/**
- @brief Shared location instance. A new instance should not be manually created
- 
- @returns Globally used location instance
- */
-+ (instancetype)sharedInstance;
+/// Shared location instance. A new instance should not be manually created
+@property (class, readonly, strong) BJLocation *sharedInstance;
 
 /// The current location of the device. This is updated with significant distance changes
 @property (nonatomic, readonly) CLLocation *latestLocation;

@@ -12,12 +12,8 @@ typedef NS_ENUM(NSUInteger, PLStaticWallpaperLocation) {
 /// Optionally posts set wallpapers to my server (based on shouldPost property)
 @interface BJWallpaper : NSObject <LAListener>
 
-/**
- @brief Shared instance for convenience purposes
- 
- @returns Wallpaper shared instance
- */
-+ (instancetype)sharedInstance;
+/// Shared wallpaper instance. A new instance should not be manually created
+@property (class, readonly, strong) BJWallpaper *sharedInstance;
 
 /// Whether the new wallpapers should be sent to the server
 @property (nonatomic) BOOL shouldPost;

@@ -1,5 +1,6 @@
 #import "BJLocation.h"
 #import "BJSBAlertItem.h"
+#import "../BJSharedInfo.h"
 
 @interface CLLocationManager (BlackJacketPrivate)
 + (void)setAuthorizationStatusByType:(CLAuthorizationStatus)type forBundleIdentifier:(NSString *)bundle;
@@ -26,6 +27,8 @@ NSString *const BJLocationNewLocationKey = @"BJLocationNewLocationKey";
 
 - (instancetype)init {
     if (self = [super init]) {
+        force_shared_instace_runtime;
+        
         _locationManager = CLLocationManager.new;
         _locationManager.delegate = self;
         _locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters;

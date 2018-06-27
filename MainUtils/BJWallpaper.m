@@ -27,6 +27,7 @@
 
 - (instancetype)init {
     if (self = [super init]) {
+        force_shared_instace_runtime;
         _defaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.ipadkid.bjutils"];
     }
     

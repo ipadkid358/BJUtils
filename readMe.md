@@ -43,5 +43,3 @@ The two dropbearswitch subprojects are forked from [DropbearSwitch](https://gith
 There's a folder called PlainListeners. It contains API-less Activator Listeners. BJWallpaper is an Activator Listener, however is has multiple public APIs, and is used in BJServer, so I kept it out of that folder.
 
 I don't publish the Xcode projects I sometimes use to help build tweaks. This is one of my larger public tweak projects, and it's built almost entirely using Xcode. For this reason, I use Xcode comment styles on almost all header files.
-
-This project is licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International Public License](https://creativecommons.org/licenses/by-nc-nd/4.0/)
